@@ -95,19 +95,6 @@ blocks:
                   rm profile.out
                 fi
               done     
-  - name: Push
-    dependencies:
-      - Modified Tests
-    task:
-      jobs:
-        - name: Push
-          commands:
-            - checkout
-            - |
-              if [ -n "$BRANCH_NAME" ] && [ "$BRANCH_NAME" = "master" ]; then
-                echo "Pushing Docker images..."
-                make -j$NPROC latest
-              fi            
 after_pipeline:
   task:
     jobs:
