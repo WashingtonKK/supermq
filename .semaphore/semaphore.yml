@@ -170,3 +170,4 @@ blocks:
       jobs:
         - commands:
             - go tool cover -html=coverage.out -o coverage.html
+        - name: Coverage report
