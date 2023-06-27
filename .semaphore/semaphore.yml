@@ -1,103 +1,240 @@
-version: v1.0
-name: CI Pipeline
+Skip to content
+logo	
+Semaphore 2.0 DocumentationMonorepo workflows	
+Search…
+Use the up and down arrows to select a result. Press enter to go to the selected search result. Touch device users can use touch and swipe gestures.	
+Welcome
+ 
+Guided Tour
+ 
+Essentials
+ 
+Programming Languages
+ 
+CI/CD Environment
+ 
+Examples
+ 
+Reference
+ 
+Account Management
+ 
+Security
+ 
+Score
+ 
+FAQ
+Essentials
+Key Concepts 
+Overview
+Pipelines
+Triggers
+Scheduler/cron
+Artifacts
+Environment variables
+Secrets
+Tests
+Debugging
+Optimizations 
+Caching
+Fail-fast
+Auto-cancel
+Skipping commits
+Prioritizing jobs
+Monorepo workflows
+Job matrix
+Deployment 
+Deploying with promotions
+Parameterized promotions
+Deployment targets
+Pipeline queues
+Tag-triggered deployment
+Deployment dashboards
+Notifications 
+Slack notifications
+Webhook notifications
+Status checks
+Status Badges
+Table of contents
+Setting up a monorepo project
+Change-based block execution
+Set up automatic deployments for a monorepo project
+Additional examples of monorepo configuration
+When a directory changes
+When a file changes
+Changing the default branch from master to main
+Excluding changes in the pipeline file
+See also
+
+Monorepo Workflows#
+A monorepo (short for monolithic repository) is a software development strategy where code for many applications, which may or may not be mutually dependent, is stored in the same version-controlled repository. This guide shows you how to optimize your Semaphore workflows for monorepo projects.
+
+Some advantages of the monorepo approach are:
+
+Ease of code reuse — it is easy to abstract shared behavior into common libraries.
+Simplified dependency management — third-party dependencies are easily shared.
+Atomic commits across multiple applications — you can refactor multiple applications at once with a single commit.
+Single source of truth — there’s only one version of each dependency.
+Unified CI/CD — a standardized process can build and deploy every application in the repository.
+Semaphore comes with out-of-box support for monorepos and provides an example project for you to try.
+
+Setting up a monorepo project#
+Let's say you have a simple monorepo project that consists of:
+
+A web application located in the /web-app/ directory.
+An iOS client application located in the /ios/ directory.
+A separate docs web page located in the /docs/ directory.
+We can set up a Semaphore pipeline that builds and tests each one of these components.
+
+Monorepo
+Pipeline
+
+The YAML for this pipeline is:
+
+
+version: "v1.0"
+name: Monorepo project
 agent:
   machine:
     type: e1-standard-2
-    os_image: ubuntu2004
-global_job_config:
-  epilogue:
-    always:
-      commands:
-        - '[[ -f report.xml ]] && test-results publish report.xml'
+    os_image: ubuntu1804
+
 blocks:
-  - name: Test Bootstrap
+  # Run this block on changes in the web-app folder at the root of the repository
+  - name: Test WEB server
     dependencies: []
     run:
-      when: change_in('/bootstrap/')
+      when: "change_in('/web-app/')"
     task:
       jobs:
         - commands:
             - checkout
-            - cd bootstrap
-            - go test service_test.go
-          name: Nameless 1
-  - name: Test Certs
-    when: change_in('/certs/')
+            - cd web-app
+            - make test
+
+  # Run this block on changes in the ios folder at the root of the repository
+  - name: Test iOS client
+    dependencies: []
+    run:
+      when: "change_in('/ios/')"
+    task:
+      agent:
+        machine:
+          type: a1-standard-4
+          os_image: macos-xcode12
+      jobs:
+        - commands:
+            - checkout
+            - cd ios
+            - make test
+
+  # Run this block on changes in the docs folder at the root of the repository
+  - name: Test docs page
+    dependencies: []
+    run:
+      when: "change_in('/docs/')"
     task:
       jobs:
         - commands:
             - checkout
-            - cd certs
-            - go test certs_test.go
-            - go test service_test.go
-          name: Nameless 1
-    dependencies: []
-  - name: Lint
-    dependencies: []
+            - cd docs
+            - make test
+
+  # Run this block on changes in web-app or ios folders at the root of the repository
+  - name: Integration tests
+    dependencies: ["Test WEB server", "Test iOS client"]
+    run:
+      when: "change_in(['/web-app/', '/ios/'])"
     task:
       jobs:
-        - name: Linting
-          commands:
-            - |
-              function version_gt() {
-                test "$(printf ''%s\n'' "$@" | sort -V | head -n 1)" != "$1"
-              }
-            - |
-              CURRENT_GO_VERSION=$(go version | sed 's/[^0-9.]*\([0-9.]*\).*/\1/')
-            - |
-              if version_gt $GO_VERSION $CURRENT_GO_VERSION; then
-                echo "Updating go version from $CURRENT_GO_VERSION to $GO_VERSION ..."
-                sudo rm -rf /usr/bin/go
-                sudo rm -rf /usr/local/go
-                sudo rm -rf /usr/local/bin/go
-                sudo rm -rf /usr/local/golang
-                sudo rm -rf $GOROOT $GOPATH $GOBIN
-                wget https://go.dev/dl/go$GO_VERSION.linux-amd64.tar.gz
-                sudo tar -C /usr/local -xzf go$GO_VERSION.linux-amd64.tar.gz
-                export GOROOT=/usr/local/go
-                export PATH=$PATH:/usr/local/go/bin
-              fi
-            - export GOBIN=$HOME/go/bin
-            - 'export PATH=$PATH:$GOBIN'
+        - commands:
             - checkout
-            - 'curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOBIN) $GOLANGCI_LINT_VERSION'
-            - 'golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
-      prologue:
-        commands:
-          - '# This script contains commands to be executed by the CI tool.'
-          - NPROC=$(nproc)
-          - GO_VERSION=1.19.4
-          - PROTOC_VERSION=21.12
-          - PROTOC_GEN_VERSION=v1.28.1
-          - PROTOC_GRPC_VERSION=v1.2.0
-          - GOLANGCI_LINT_VERSION=v1.52.1
-  - name: Modified Tests
-    dependencies: []
-    task:
-      jobs:
-        - name: Tests on Modified modules
-          commands:
-            - checkout
-            - echo "Running modified tests...."
-            - echo "" > coverage.txt
-            - |
-              # Get the list of modified Go files
-              MODIFIED_FILES=$(git diff --name-only --diff-filter=AM | grep '\.go$')
+            - make integration-tests
+With this setup, we run separate tests for each part of the system and integration tests once both web application and iOS client tests pass.
 
-              # Extract the unique Go module names from modified files
-              MODIFIED_MODULES=$(go list -e -f '{{.Module.Path}}' $(dirname $MODIFIED_FILES) | sort -u)
+Change-based block execution#
+You can set the criteria for running jobs within a block in the Skip/Run conditions section. The run property is evaluated on each workflow to decide if the block should be run or skipped.
 
-              # Run tests for modified modules
-              for module in $MODIFIED_MODULES; do
-                go test -mod=vendor -v -race -tags test -coverprofile=profile.out -covermode=atomic "$module/..."
-                if [ -f profile.out ]; then
-                  cat profile.out >> coverage.txt
-                  rm profile.out
-                fi
-              done     
-after_pipeline:
-  task:
-    jobs:
-      - name: Pipeline report
-        commands:
-          - test-results gen-pipeline-report
+Skip/Run
+conditions
+
+When combined with the change_in function, which checks whether there were recent changes on a given path, it allows us to only run tests for those parts of the project that are currently being worked on.
+
+In the example below, this means that if we are only working on the iOS client app within the /ios/ directory of the repository, the only blocks that will be executed are Test iOS client and Integration tests. Everything else will be skipped.
+
+change_in examples
+
+This can significantly reduce time and cost while still providing you with required feedback for the changes introduced into the monorepo.
+
+The change_in function checks for changed files in recent commits. The commit range analyzed depends on whether you're working on master/main or on a branch/pull request. For more details and ways in which this can be modified please check the reference.
+
+Pipeline file changes - default behavior
+
+By default, when you change the pipeline file, Semaphore will evaluate every change_in expression as true. That means that all blocks having that expression will be run/skipped. You can avoid that by excluding pipeline changes from evaluation.
+
+Set up automatic deployments for a monorepo project#
+Here we will assume that you already have three pipelines for:
+
+Deploying the web app.
+Releasing the iOS client.
+Publishing documentation pages.
+You can find examples for various kinds of deployments in the use cases section of our documentation. We will focus on auto-promoting the right pipelines using change detection. To achieve this, we need to introduce promotion conditions.
+
+Adding a promotion
+
+Ticking Enable automatic promotion brings up the conditions field. Semaphore supports using change_in in this field. You can combine it with the branch and result properties to start a pipeline on a given branch. E.g. for the web app:
+
+Promotion for Web
+app
+
+To complete the example, this is how the iOS Release and Publish docs pipelines should look:
+
+Promotion for iOS
+Client
+
+Promotion for docs
+pages
+
+The resulting YAML for the promotions is:
+
+
+promotions:
+  # deploy web app when test pass on master branch and there are changes in the web-app folder
+  - name: Deploy Web Server
+    pipeline_file: web-prod.yml
+    auto_promote:
+      when: "branch = 'master' and result = 'passed' and change_in('/web-app/')"
+  # deploy web app when test pass on master branch and there are changes in the ios folder
+  - name: Release iOS client
+    pipeline_file: ios-prod.yml
+    auto_promote:
+      when: "branch = 'master' and result = 'passed' and change_in('/ios/')"
+  # deploy web app when test pass on master branch and there are changes in the docs folder
+  - name: Publish docs
+    pipeline_file: docs-prod.yml
+    auto_promote:
+      when: "branch = 'master' and result = 'passed' and change_in('/docs/')"
+Each part of the system will be automatically deployed when the tests pass on the master branch, but only if the push that initiated workflow contains changes in the locations monitored by the change_in function.
+
+Additional examples of monorepo configuration#
+When a directory changes#
+
+change_in('/web-app/')
+When a file changes#
+
+change_in('../Gemfile.lock')
+Changing the default branch from master to main#
+
+change_in('/web-app/', {default_branch: 'main'})
+Excluding changes in the pipeline file#
+Note: If you change the pipeline file, Semaphore will consider change_in as true. The following illustrates how to disable this behaviour.
+
+
+change_in('/web-app/', {pipeline_file: 'ignore'})
+See also#
+Skip block execution
+Deploying with promotions
+Defining 'when' conditions
+Try our monorepo demo project
+© 2009-2022 Rendered Text
+  
