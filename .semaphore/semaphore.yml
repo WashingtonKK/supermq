@@ -60,7 +60,7 @@ blocks:
             - checkout
             - cd lora
             - go test
-          name: Nameless 1
+          name: Test lora
   - name: Test mqtt
     dependencies: []
     run:
@@ -81,13 +81,7 @@ blocks:
         - commands:
             - checkout
             - cd things/
-            - |
-              find -type d | while read -r dir; do
-                if [[ -n $(find "$dir" -name "*_test.go" -type f) ]]; then
-                  echo "Running tests in directory: $dir"
-                  (cd "$dir" && go test -v)
-                fi
-              done
+            - go test ./ ...
           name: Test things
   - name: Test users
     dependencies: []
@@ -97,14 +91,7 @@ blocks:
       jobs:
         - commands:
             - checkout
-            - cd users/
-            - |
-              find -type d | while read -r dir; do
-                if [[ -n $(find "$dir" -name "*_test.go" -type f) ]]; then
-                  echo "Running tests in directory: $dir"
-                  (cd "$dir" && go test -v)
-                fi
-              done
+            - go test ./ ...
           name: Test users
   - name: Test twins
     dependencies: []
@@ -115,13 +102,7 @@ blocks:
         - commands:
             - checkout
             - cd twins/
-            - |
-              find -type d | while read -r dir; do
-                if [[ -n $(find "$dir" -name "*_test.go" -type f) ]]; then
-                  echo "Running tests in directory: $dir"
-                  (cd "$dir" && go test -v)
-                fi
-              done
+            - go test ./ ...
           name: Test twins
   - name: Test ws
     dependencies: []
@@ -132,13 +113,7 @@ blocks:
         - commands:
             - checkout
             - cd ws/
-            - |
-              find -type d | while read -r dir; do
-                if [[ -n $(find "$dir" -name "*_test.go" -type f) ]]; then
-                  echo "Running tests in directory: $dir"
-                  (cd "$dir" && go test -v)
-                fi
-              done
+            - go test ./ ...
           name: Test ws
   - name: Lint
     dependencies: []
