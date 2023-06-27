@@ -164,7 +164,9 @@ blocks:
             - make test
           name: integration test
   - name: Generate Coverage Report
-    command:
-      - go tool cover -html=coverage.out -o coverage.html
     dependencies:
       - Integration tests
+    task:
+      jobs:
+        - commands:
+            - go tool cover -html=coverage.out -o coverage.html
