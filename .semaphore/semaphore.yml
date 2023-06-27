@@ -15,6 +15,7 @@ blocks:
             - checkout
             - cd bootstrap
             - go test -v -coverprofile=coverage.out ./...
+            - go tool cover -html=coverage.out -o coverage.html 
           name: Test Bootstrap
   - name: Test certs
     dependencies: []
@@ -25,8 +26,8 @@ blocks:
         - commands:
             - checkout
             - cd certs
-            - go test -v -coverprofile=coverage.out certs_test.go
-            - go test -v -coverprofile=coverage.out service_test.go
+            - go test -v -coverprofile=coverage.out ./...
+            - go tool cover -html=coverage.out -o coverage.html 
           name: Test certs
   - name: Test http
     dependencies: []
@@ -38,6 +39,7 @@ blocks:
             - checkout
             - cd http/api
             - go test -v -coverprofile=coverage.out
+            - go tool cover -html=coverage.out -o coverage.html 
           name: Test http
   - name: Test logger
     dependencies: []
@@ -49,6 +51,7 @@ blocks:
             - checkout
             - cd logger
             - go test -v -coverprofile=coverage.out ./...
+            - go tool cover -html=coverage.out -o coverage.html 
           name: Logger test
   - name: Test all
     dependencies: []
@@ -70,6 +73,7 @@ blocks:
             - checkout
             - cd lora
             - go test -v -coverprofile=coverage.out
+            - go tool cover -html=coverage.out -o coverage.html 
           name: Test lora
   - name: Test mqtt
     dependencies: []
@@ -81,6 +85,7 @@ blocks:
             - checkout
             - cd mqtt
             - go test -v -coverprofile=coverage.out
+            - go tool cover -html=coverage.out -o coverage.html 
           name: Mqtt test
   - name: Test things
     dependencies: []
@@ -92,6 +97,7 @@ blocks:
             - checkout
             - cd things/
             - go test -v -coverprofile=coverage.out ./...
+            - go tool cover -html=coverage.out -o coverage.html 
           name: Test things
   - name: Test users
     dependencies: []
@@ -102,6 +108,7 @@ blocks:
         - commands:
             - checkout
             - go test -v -coverprofile=coverage.out ./...
+            - go tool cover -html=coverage.out -o coverage.html 
           name: Test users
   - name: Test twins
     dependencies: []
@@ -113,6 +120,7 @@ blocks:
             - checkout
             - cd twins/
             - go test -v -coverprofile=coverage.out ./...
+            - go tool cover -html=coverage.out -o coverage.html            
           name: Test twins
   - name: Test ws
     dependencies: []
@@ -124,6 +132,7 @@ blocks:
             - checkout
             - cd ws/
             - go test -v -coverprofile=coverage.out ./...
+            - go tool cover -html=coverage.out -o coverage.html            
           name: Test ws
   - name: Lint
     dependencies: []
@@ -163,11 +172,4 @@ blocks:
             - checkout
             - make test
           name: integration test
-  - name: Generate Coverage Report
-    dependencies:
-      - Integration tests
-    task:
-      jobs:
-        - commands:
-            - go tool cover -html=coverage.out -o coverage.html
-          name: Coverage report
+
