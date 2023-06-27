@@ -170,6 +170,9 @@ blocks:
       - Test twins
       - Test things
       - Test lora
+      - Test bootstrap
+      - Test logger
+      - Test mqtt
     run:
       when: 'change_in([''/http/'', ''/certs/'', ''/things/'', ''/users/''])'
     task:
