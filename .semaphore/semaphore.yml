@@ -40,7 +40,7 @@ blocks:
             - checkout
             - cd http/api
             - go test
-          name: Nameless 1
+          name: Test http
   - name: Test logger
     dependencies: []
     run:
@@ -165,8 +165,13 @@ blocks:
     dependencies:
       - Test http
       - Test certs
+      - Test users
+      - Test ws
+      - Test twins
+      - Test things
+      - Test lora
     run:
-      when: 'change_in([''/http/'', ''/certs/''])'
+      when: 'change_in([''/http/'', ''/certs/'', ''/things/'', ''/users/''])'
     task:
       jobs:
         - commands:
