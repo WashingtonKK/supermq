@@ -50,6 +50,16 @@ blocks:
             - cd logger
             - go test -v -coverprofile=coverage.out ./...
           name: Logger test
+  - name: Test all
+    dependencies: []
+    run:
+      when: change_in('./semaphore/')
+    task:
+      jobs:
+        - commands:
+            - checkout
+            - make test
+          name: All test
   - name: Test lora
     dependencies: []
     run:
