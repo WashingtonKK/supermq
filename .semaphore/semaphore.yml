@@ -144,8 +144,7 @@ blocks:
               done
           name: Test ws   
   - name: Lint
-    dependencies:
-      - Setup
+    dependencies: []
     task:
       jobs:
         - name: Linting
