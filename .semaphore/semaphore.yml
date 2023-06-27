@@ -41,15 +41,117 @@ blocks:
             - cd http/api
             - go test
           name: Nameless 1
+  - name: Test logger
+    dependencies: []
+    run:
+      when: change_in('/logger/')
+    task:
+      jobs:
+        - commands:
+            - checkout
+            - cd logger
+            - go test level_test.go
+            - go test logger_test.go
+          name: Logger test
+  - name: Test lora
+    dependencies: []
+    run:
+      when: change_in('/lora/')
+    task:
+      jobs:
+        - commands:
+            - checkout
+            - cd lora
+            - go test
+          name: Nameless 1      
+  - name: Test mqtt
+    dependencies: []
+    run:
+      when: change_in('/mqtt/')
+    task:
+      jobs:
+        - commands:
+            - checkout
+            - cd mqtt
+            - go test
+          name: Mqtt test    
+  - name: Test things
+    dependencies: []
+    run:
+      when: change_in('/things/')
+    task:
+      jobs:
+        - commands:
+            - checkout
+            - cd things/
+            - |
+              find -type d | while read -r; do
+                if [[ -n $(find "$dir" -name "_test.go" -type f)]]; then
+                  echo "Running tests in directory: $dir"
+                  (cd "$dir" && go test -v)
+                fi
+              done
+          name: Test things         
+  - name: Test users
+    dependencies: []
+    run:
+      when: change_in('/users/')
+    task:
+      jobs:
+        - commands:
+            - checkout
+            - cd users/
+            - |
+              find -type d | while read -r; do
+                if [[ -n $(find "$dir" -name "_test.go" -type f)]]; then
+                  echo "Running tests in directory: $dir"
+                  (cd "$dir" && go test -v)
+                fi
+              done
+          name: Test users     
+  - name: Test twins
+    dependencies: []
+    run:
+      when: change_in('/twins/')
+    task:
+      jobs:
+        - commands:
+            - checkout
+            - cd twins/
+            - |
+              find -type d | while read -r; do
+                if [[ -n $(find "$dir" -name "_test.go" -type f)]]; then
+                  echo "Running tests in directory: $dir"
+                  (cd "$dir" && go test -v)
+                fi
+              done
+          name: Test twins        
+  - name: Test ws
+    dependencies: []
+    run:
+      when: change_in('/ws/')
+    task:
+      jobs:
+        - commands:
+            - checkout
+            - cd ws/
+            - |
+              find -type d | while read -r; do
+                if [[ -n $(find "$dir" -name "_test.go" -type f)]]; then
+                  echo "Running tests in directory: $dir"
+                  (cd "$dir" && go test -v)
+                fi
+              done
+          name: Test ws                                          
   - name: Integration tests
     dependencies:
       - Test http
       - Test certs
     run:
-      when: 'change_in([''/web-app/'', ''/ios/''])'
+      when: 'change_in([''/http/'', ''/certs/''])'
     task:
       jobs:
         - commands:
             - checkout
-            - make integration-tests
-          name: Nameless 1
+            - make test
+          name: integration test
