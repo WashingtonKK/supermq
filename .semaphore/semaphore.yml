@@ -14,15 +14,13 @@ blocks:
         - commands:
             - checkout
             - cd bootstrap
-            - go test service_test.go
-            - go test reader_test.go
+            - go test ./ ...
           name: Test Bootstrap
   - name: Test certs
     dependencies: []
     run:
       when: change_in('/certs/')
     task:
-        
       jobs:
         - commands:
             - checkout
@@ -50,8 +48,7 @@ blocks:
         - commands:
             - checkout
             - cd logger
-            - go test level_test.go
-            - go test logger_test.go
+            - go test ./ ...
           name: Logger test
   - name: Test lora
     dependencies: []
@@ -63,7 +60,7 @@ blocks:
             - checkout
             - cd lora
             - go test
-          name: Nameless 1      
+          name: Nameless 1
   - name: Test mqtt
     dependencies: []
     run:
@@ -74,7 +71,7 @@ blocks:
             - checkout
             - cd mqtt
             - go test
-          name: Mqtt test    
+          name: Mqtt test
   - name: Test things
     dependencies: []
     run:
@@ -91,7 +88,7 @@ blocks:
                   (cd "$dir" && go test -v)
                 fi
               done
-          name: Test things         
+          name: Test things
   - name: Test users
     dependencies: []
     run:
@@ -108,7 +105,7 @@ blocks:
                   (cd "$dir" && go test -v)
                 fi
               done
-          name: Test users     
+          name: Test users
   - name: Test twins
     dependencies: []
     run:
@@ -125,7 +122,7 @@ blocks:
                   (cd "$dir" && go test -v)
                 fi
               done
-          name: Test twins        
+          name: Test twins
   - name: Test ws
     dependencies: []
     run:
@@ -142,7 +139,7 @@ blocks:
                   (cd "$dir" && go test -v)
                 fi
               done
-          name: Test ws   
+          name: Test ws
   - name: Lint
     dependencies: []
     task:
@@ -160,7 +157,7 @@ blocks:
             - 'golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
       prologue:
         commands:
-          - GOLANGCI_LINT_VERSION=v1.52.1                                                 
+          - GOLANGCI_LINT_VERSION=v1.52.1
   - name: Integration tests
     dependencies:
       - Test http
