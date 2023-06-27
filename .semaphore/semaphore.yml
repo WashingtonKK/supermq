@@ -14,7 +14,7 @@ blocks:
         - commands:
             - checkout
             - cd bootstrap
-            - go test ./ ...
+            - go test -v -coverprofile=coverage.out ./ ...
           name: Test Bootstrap
   - name: Test certs
     dependencies: []
@@ -25,8 +25,8 @@ blocks:
         - commands:
             - checkout
             - cd certs
-            - go test certs_test.go
-            - go test service_test.go
+            - go test -v -coverprofile=coverage.out certs_test.go
+            - go test -v -coverprofile=coverage.out service_test.go
           name: Test certs
   - name: Test http
     dependencies: []
@@ -37,7 +37,7 @@ blocks:
         - commands:
             - checkout
             - cd http/api
-            - go test
+            - go test -v -coverprofile=coverage.out
           name: Test http
   - name: Test logger
     dependencies: []
@@ -48,7 +48,7 @@ blocks:
         - commands:
             - checkout
             - cd logger
-            - go test ./ ...
+            - go test -v -coverprofile=coverage.out ./ ...
           name: Logger test
   - name: Test lora
     dependencies: []
@@ -59,7 +59,7 @@ blocks:
         - commands:
             - checkout
             - cd lora
-            - go test
+            - go test -v -coverprofile=coverage.out
           name: Test lora
   - name: Test mqtt
     dependencies: []
@@ -70,7 +70,7 @@ blocks:
         - commands:
             - checkout
             - cd mqtt
-            - go test
+            - go test -v -coverprofile=coverage.out
           name: Mqtt test
   - name: Test things
     dependencies: []
@@ -81,7 +81,7 @@ blocks:
         - commands:
             - checkout
             - cd things/
-            - go test ./ ...
+            - go test -v -coverprofile=coverage.out ./ ...
           name: Test things
   - name: Test users
     dependencies: []
@@ -91,7 +91,7 @@ blocks:
       jobs:
         - commands:
             - checkout
-            - go test ./ ...
+            - go test -v -coverprofile=coverage.out ./ ...
           name: Test users
   - name: Test twins
     dependencies: []
@@ -102,7 +102,7 @@ blocks:
         - commands:
             - checkout
             - cd twins/
-            - go test ./ ...
+            - go test -v -coverprofile=coverage.out ./ ...
           name: Test twins
   - name: Test ws
     dependencies: []
@@ -113,7 +113,7 @@ blocks:
         - commands:
             - checkout
             - cd ws/
-            - go test ./ ...
+            - go test -v -coverprofile=coverage.out ./ ...
           name: Test ws
   - name: Lint
     dependencies: []
