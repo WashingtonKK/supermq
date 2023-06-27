@@ -48,7 +48,7 @@ blocks:
         - commands:
             - checkout
             - cd logger
-            - go test -v -coverprofile=coverage.out ./ ...
+            - go test -v -coverprofile=coverage.out ./...
           name: Logger test
   - name: Test lora
     dependencies: []
@@ -81,7 +81,7 @@ blocks:
         - commands:
             - checkout
             - cd things/
-            - go test -v -coverprofile=coverage.out ./ ...
+            - go test -v -coverprofile=coverage.out ./...
           name: Test things
   - name: Test users
     dependencies: []
@@ -91,7 +91,7 @@ blocks:
       jobs:
         - commands:
             - checkout
-            - go test -v -coverprofile=coverage.out ./ ...
+            - go test -v -coverprofile=coverage.out ./...
           name: Test users
   - name: Test twins
     dependencies: []
@@ -102,7 +102,7 @@ blocks:
         - commands:
             - checkout
             - cd twins/
-            - go test -v -coverprofile=coverage.out ./ ...
+            - go test -v -coverprofile=coverage.out ./...
           name: Test twins
   - name: Test ws
     dependencies: []
@@ -113,7 +113,7 @@ blocks:
         - commands:
             - checkout
             - cd ws/
-            - go test -v -coverprofile=coverage.out ./ ...
+            - go test -v -coverprofile=coverage.out ./...
           name: Test ws
   - name: Lint
     dependencies: []
