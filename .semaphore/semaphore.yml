@@ -170,7 +170,7 @@ blocks:
       - Test twins
       - Test things
       - Test lora
-      - Test bootstrap
+      - Test Bootstrap
       - Test logger
       - Test mqtt
     run:
