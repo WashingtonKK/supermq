@@ -1,28 +1,25 @@
-version: "v1.0"
+version: v1.0
 name: Monorepo project
 agent:
   machine:
     type: e1-standard-2
     os_image: ubuntu1804
-
 blocks:
-  # Run this block on changes in the web-app folder at the root of the repository
   - name: Test WEB server
     dependencies: []
     run:
-      when: "change_in('/web-app/')"
+      when: change_in('/web-app/')
     task:
       jobs:
         - commands:
             - checkout
             - cd web-app
             - make test
-
-  # Run this block on changes in the ios folder at the root of the repository
+          name: Nameless 1
   - name: Test iOS client
     dependencies: []
     run:
-      when: "change_in('/ios/')"
+      when: change_in('/ios/')
     task:
       agent:
         machine:
@@ -33,114 +30,27 @@ blocks:
             - checkout
             - cd ios
             - make test
-
-  # Run this block on changes in the docs folder at the root of the repository
+          name: Nameless 1
   - name: Test docs page
     dependencies: []
     run:
-      when: "change_in('/docs/')"
+      when: change_in('/docs/')
     task:
       jobs:
         - commands:
             - checkout
             - cd docs
             - make test
-
-  # Run this block on changes in web-app or ios folders at the root of the repository
+          name: Nameless 1
   - name: Integration tests
-    dependencies: ["Test WEB server", "Test iOS client"]
+    dependencies:
+      - Test WEB server
+      - Test iOS client
     run:
-      when: "change_in(['/web-app/', '/ios/'])"
+      when: 'change_in([''/web-app/'', ''/ios/''])'
     task:
       jobs:
         - commands:
             - checkout
             - make integration-tests
-With this setup, we run separate tests for each part of the system and integration tests once both web application and iOS client tests pass.
-
-Change-based block execution#
-You can set the criteria for running jobs within a block in the Skip/Run conditions section. The run property is evaluated on each workflow to decide if the block should be run or skipped.
-
-Skip/Run
-conditions
-
-When combined with the change_in function, which checks whether there were recent changes on a given path, it allows us to only run tests for those parts of the project that are currently being worked on.
-
-In the example below, this means that if we are only working on the iOS client app within the /ios/ directory of the repository, the only blocks that will be executed are Test iOS client and Integration tests. Everything else will be skipped.
-
-change_in examples
-
-This can significantly reduce time and cost while still providing you with required feedback for the changes introduced into the monorepo.
-
-The change_in function checks for changed files in recent commits. The commit range analyzed depends on whether you're working on master/main or on a branch/pull request. For more details and ways in which this can be modified please check the reference.
-
-Pipeline file changes - default behavior
-
-By default, when you change the pipeline file, Semaphore will evaluate every change_in expression as true. That means that all blocks having that expression will be run/skipped. You can avoid that by excluding pipeline changes from evaluation.
-
-Set up automatic deployments for a monorepo project#
-Here we will assume that you already have three pipelines for:
-
-Deploying the web app.
-Releasing the iOS client.
-Publishing documentation pages.
-You can find examples for various kinds of deployments in the use cases section of our documentation. We will focus on auto-promoting the right pipelines using change detection. To achieve this, we need to introduce promotion conditions.
-
-Adding a promotion
-
-Ticking Enable automatic promotion brings up the conditions field. Semaphore supports using change_in in this field. You can combine it with the branch and result properties to start a pipeline on a given branch. E.g. for the web app:
-
-Promotion for Web
-app
-
-To complete the example, this is how the iOS Release and Publish docs pipelines should look:
-
-Promotion for iOS
-Client
-
-Promotion for docs
-pages
-
-The resulting YAML for the promotions is:
-
-
-promotions:
-  # deploy web app when test pass on master branch and there are changes in the web-app folder
-  - name: Deploy Web Server
-    pipeline_file: web-prod.yml
-    auto_promote:
-      when: "branch = 'master' and result = 'passed' and change_in('/web-app/')"
-  # deploy web app when test pass on master branch and there are changes in the ios folder
-  - name: Release iOS client
-    pipeline_file: ios-prod.yml
-    auto_promote:
-      when: "branch = 'master' and result = 'passed' and change_in('/ios/')"
-  # deploy web app when test pass on master branch and there are changes in the docs folder
-  - name: Publish docs
-    pipeline_file: docs-prod.yml
-    auto_promote:
-      when: "branch = 'master' and result = 'passed' and change_in('/docs/')"
-Each part of the system will be automatically deployed when the tests pass on the master branch, but only if the push that initiated workflow contains changes in the locations monitored by the change_in function.
-
-Additional examples of monorepo configuration#
-When a directory changes#
-
-change_in('/web-app/')
-When a file changes#
-
-change_in('../Gemfile.lock')
-Changing the default branch from master to main#
-
-change_in('/web-app/', {default_branch: 'main'})
-Excluding changes in the pipeline file#
-Note: If you change the pipeline file, Semaphore will consider change_in as true. The following illustrates how to disable this behaviour.
-
-
-change_in('/web-app/', {pipeline_file: 'ignore'})
-See also#
-Skip block execution
-Deploying with promotions
-Defining 'when' conditions
-Try our monorepo demo project
-© 2009-2022 Rendered Text
-  
+          name: Nameless 1
