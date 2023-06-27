@@ -157,6 +157,11 @@ blocks:
       - Test mqtt
     run:
       when: 'change_in([''/http/'', ''/certs/'', ''/things/'', ''/users/''])'
+  - name: Generate Coverage Report
+    command:
+      - go tool cover -html=coverage.out -o coverage.html
+    dependencies:
+      - Integration tests
     task:
       jobs:
         - commands:
