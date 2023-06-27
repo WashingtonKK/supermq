@@ -142,7 +142,26 @@ blocks:
                   (cd "$dir" && go test -v)
                 fi
               done
-          name: Test ws                                          
+          name: Test ws   
+  - name: Lint
+    dependencies:
+      - Setup
+    task:
+      jobs:
+        - name: Linting
+          commands:
+            - |
+              function version_gt() {
+                test "$(printf ''%s\n'' "$@" | sort -V | head -n 1)" != "$1"
+              }
+            - export GOBIN=$HOME/go/bin
+            - 'export PATH=$PATH:$GOBIN'
+            - checkout
+            - 'curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOBIN) $GOLANGCI_LINT_VERSION'
+            - 'golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
+      prologue:
+        commands:
+          - GOLANGCI_LINT_VERSION=v1.52.1                                                 
   - name: Integration tests
     dependencies:
       - Test http
