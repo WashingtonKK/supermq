@@ -5,47 +5,46 @@ agent:
     type: e1-standard-2
     os_image: ubuntu2004
 blocks:
-  - name: Test WEB server
+  - name: Test Bootstrap
     dependencies: []
     run:
-      when: change_in('/web-app/')
+      when: change_in('/bootstrap/')
     task:
       jobs:
         - commands:
             - checkout
-            - cd web-app
-            - make test
-          name: Nameless 1
-  - name: Test iOS client
+            - cd bootstrap
+            - go test service_test.go
+            - go test reader_test.go
+          name: Test Bootstrap
+  - name: Test certs
     dependencies: []
     run:
-      when: change_in('/ios/')
+      when: change_in('/certs/')
     task:
-      agent:
-        machine:
-          type: a1-standard-4
-          os_image: macos-xcode12
+        
       jobs:
         - commands:
             - checkout
-            - cd ios
-            - make test
-          name: Nameless 1
-  - name: Test docs page
+            - cd certs
+            - go test certs_test.go
+            - go test service_test.go
+          name: Test certs
+  - name: Test http
     dependencies: []
     run:
-      when: change_in('/docs/')
+      when: change_in('/http/api/')
     task:
       jobs:
         - commands:
             - checkout
-            - cd docs
-            - make test
+            - cd http/api
+            - go test
           name: Nameless 1
   - name: Integration tests
     dependencies:
-      - Test WEB server
-      - Test iOS client
+      - Test http
+      - Test certs
     run:
       when: 'change_in([''/web-app/'', ''/ios/''])'
     task:
