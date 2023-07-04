@@ -72,7 +72,7 @@ blocks:
           name: Consumers test          
   - name: Test all
     dependencies:
-      - Linting
+      - Lint
     run:
       when: "branch = 'master'"
     task:
