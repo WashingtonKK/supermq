@@ -56,7 +56,7 @@ blocks:
   - name: Test all
     dependencies: []
     run:
-      when: change_in('./semaphore/')
+      when: change_in('./semaphore/') || "branch('main') || comment('LGTM')"
     task:
       jobs:
         - commands:
