@@ -32,7 +32,7 @@ blocks:
   - name: Test http
     dependencies: []
     run:
-      when: change_in('/http/api/')
+      when: change_in('/http/')
     task:
       jobs:
         - commands:
