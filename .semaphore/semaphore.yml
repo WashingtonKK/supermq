@@ -73,7 +73,7 @@ blocks:
   - name: Test all
     dependencies: []
     run:
-      when: "branch" = "master"
+      when: "branch = 'master'"
     task:
       jobs:
         - commands:
