@@ -67,14 +67,15 @@ blocks:
           name: Consumers test          
   - name: Test all
     dependencies: []
+    run:
+      when: "branch" = "master"
     task:
       name: All test
       jobs:
         - commands:
             - checkout
             - make test
-        run:
-          when: "branch" = "master"
+
 
   - name: Test lora
     dependencies: []
