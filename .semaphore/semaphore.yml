@@ -190,6 +190,9 @@ blocks:
       jobs:
         - commands:
             - checkout
+            - make all
+            - make install
+            - make dockers
             - make test
           name: integration test
 
