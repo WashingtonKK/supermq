@@ -74,12 +74,7 @@ blocks:
             - checkout
             - make test
         run:
-          when:
-            event:
-              only: main
-            changeset:
-              comment:
-                matches: "LGTM"
+          when: "branch" = "master" OR "comment" = "LGTM"
 
   - name: Test lora
     dependencies: []
