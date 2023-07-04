@@ -8,7 +8,7 @@ agent:
 auto_cancel:
   running:
     when: "branch != 'master'"
-        
+
 blocks:
   - name: Test Bootstrap
     dependencies: []
@@ -80,7 +80,7 @@ blocks:
         - commands:
             - checkout
             - make test
-
+          name: All test
 
   - name: Test lora
     dependencies: []
