@@ -68,7 +68,12 @@ blocks:
   - name: Test all
     dependencies: []
     run:
-      when: change_in('./semaphore/') || "branch('main') || comment('LGTM')"
+      when:
+        event:
+          only: main
+        changeset:
+          comment:
+            matches: "LGTM"
     task:
       jobs:
         - commands:
