@@ -67,19 +67,19 @@ blocks:
           name: Consumers test          
   - name: Test all
     dependencies: []
-    run:
-      when:
-        event:
-          only: main
-        changeset:
-          comment:
-            matches: "LGTM"
     task:
       jobs:
         - commands:
             - checkout
             - make test
           name: All test
+      run:
+        when:
+          event:
+            only: main
+          changeset:
+            comment:
+              matches: "LGTM"
   - name: Test lora
     dependencies: []
     run:
