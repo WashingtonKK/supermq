@@ -75,7 +75,6 @@ blocks:
     run:
       when: "branch" = "master"
     task:
-      name: All test
       jobs:
         - commands:
             - checkout
