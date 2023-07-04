@@ -184,6 +184,7 @@ blocks:
       - Test Bootstrap
       - Test logger
       - Test mqtt
+      - Test consumers
     run:
       when: 'change_in([''/http/'', ''/certs/'', ''/things/'', ''/users/''])'
     task:
