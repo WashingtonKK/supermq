@@ -53,6 +53,18 @@ blocks:
             - go test -v -coverprofile=coverage.out ./...
             - go tool cover -html=coverage.out -o coverage.html 
           name: Logger test
+  - name: Test consumers
+    dependencies: []
+    run:
+      when: change_in('/consumers/')
+    task:
+      jobs:
+        - commands:
+            - checkout
+            - cd consumers
+            - go test -v -coverprofile=coverage.out ./...
+            - go tool cover -html=coverage.out -o coverage.html 
+          name: Consumers test          
   - name: Test all
     dependencies: []
     run:
