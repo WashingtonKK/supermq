@@ -72,7 +72,7 @@ blocks:
           name: Consumers test          
   - name: Test all
     dependencies:
-      - Lint
+      - Lints
     run:
       when: "branch = 'master'"
     task:
@@ -168,7 +168,7 @@ blocks:
             - checkout
             - 'curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOBIN) $GOLANGCI_LINT_VERSION'
             - 'golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
-          name: Lint
+          name: Lints
       prologue:
         commands:
           - GOLANGCI_LINT_VERSION=v1.52.1
@@ -193,7 +193,6 @@ blocks:
             - checkout
             - NPROC=$(nproc) 
             - make all
-            - make install
             - make dockers
             - MF_BROKER_TYPE=rabbitmq make http
             - make -j$NPROC
