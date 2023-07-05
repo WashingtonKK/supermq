@@ -126,7 +126,7 @@ blocks:
       #     value: /bin:/usr/bin
       jobs:
         - commands:
-            - export PATH=$PATH:/usr/local/bin/go/bin
+            - export PATH=$PATH:/usr/local/go/bin
             - export GOPATH=/usr/local/bin/go
             - export GOBIN=$GOPATH/bin
             - export PATH=$PATH:$GOBIN
