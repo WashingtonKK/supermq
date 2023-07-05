@@ -111,21 +111,25 @@ blocks:
     # run:
     #   when:
     task:
-      env_vars:
-        - name: GOPATH
-          value: /usr/local/bin/go
-        - name: PATH
-          value: /usr/local/bin
-        - name: PATH
-          value: $PATH:/usr/local/bin/go/bin
-        - name: GOBIN
-          value: $GOPATH/bin
-        - name: PATH
-          value: $PATH:$GOBIN
-        - name: PATH
-          value: /bin:/usr/bin
+      # env_vars:
+      #   - name: GOPATH
+      #     value: /usr/local/bin/go
+      #   - name: PATH
+      #     value: /usr/local/bin
+      #   - name: PATH
+      #     value: $PATH:/usr/local/bin/go/bin
+      #   - name: GOBIN
+      #     value: $GOPATH/bin
+      #   - name: PATH
+      #     value: $PATH:$GOBIN
+      #   - name: PATH
+      #     value: /bin:/usr/bin
       jobs:
         - commands:
+            - export PATH=$PATH:/usr/local/bin/go/bin
+            - export GOPATH=/usr/local/bin/go
+            - export GOBIN=$GOPATH/bin
+            - export PATH=$PATH:$GOBIN
             - NPROC=$(nproc)
             - PROTOC_VERSION=21.12
             - PROTOC_GEN_VERSION=v1.28.1
