@@ -157,8 +157,7 @@ blocks:
     dependencies: []
     task:
       jobs:
-        - name: Linting
-          commands:
+        - commands:
             - |
               function version_gt() {
                 test "$(printf ''%s\n'' "$@" | sort -V | head -n 1)" != "$1"
