@@ -120,6 +120,8 @@ blocks:
           value: $GOPATH/bin
         - name: PATH
           value: $PATH:$GOBIN
+        - name: PATH
+          value: /bin:/usr/bin
       jobs:
         - commands:
             - NPROC=$(nproc)
