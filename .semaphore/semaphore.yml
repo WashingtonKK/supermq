@@ -114,6 +114,10 @@ blocks:
       jobs:
         - commands:
             - checkout
+            - |
+              function version_gt() {
+                test "$(printf ''%s\n'' "$@" | sort -V | head -n 1)" != "$1"
+              }            
             - echo "Setting up protoc..."
             - PROTOC_ZIP=protoc-$PROTOC_VERSION-linux-x86_64.zip
             - curl -0L https://github.com/google/protobuf/releases/download/v$PROTOC_VERSION/$PROTOC_ZIP -o $PROTOC_ZIP
@@ -154,6 +158,7 @@ blocks:
             - echo "Compile check for rabbitmq..."
             - MF_BROKER_TYPE=rabbitmq make http
             - make -j$NPROC
+            name: Proto test
   - name: Test things
     dependencies: []
     run:
