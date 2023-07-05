@@ -126,15 +126,15 @@ blocks:
       #     value: /bin:/usr/bin
       jobs:
         - commands:
-            - export PATH=$PATH:/usr/local/go/bin
-            - export GOPATH=/usr/local/bin/go
-            - export GOBIN=$GOPATH/bin
-            - export PATH=$PATH:$GOBIN
             - NPROC=$(nproc)
             - PROTOC_VERSION=21.12
             - PROTOC_GEN_VERSION=v1.28.1
             - PROTOC_GRPC_VERSION=v1.2.0
-            - checkout      
+            - checkout            
+            - export PATH=$PATH:/usr/local/go/bin
+            - export GOPATH=/usr/local/bin/go
+            - export GOBIN=$GOPATH/bin
+            - export PATH=$PATH:$GOBIN  
             - |
               function version_gt() {
                 test "$(printf ''%s\n'' "$@" | sort -V | head -n 1)" != "$1"
@@ -142,9 +142,7 @@ blocks:
             - echo "Setting up protoc..."
             - PROTOC_ZIP=protoc-$PROTOC_VERSION-linux-x86_64.zip
             - curl -0L https://github.com/google/protobuf/releases/download/v$PROTOC_VERSION/$PROTOC_ZIP -o $PROTOC_ZIP
-            - ls
             - unzip -o $PROTOC_ZIP -d protoc3
-            - ls
             - sudo mv protoc3/bin/* /usr/local/bin/
             - sudo mv protoc3/include/* /usr/local/include/
             - rm -f PROTOC_ZIP     
