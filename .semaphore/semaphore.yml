@@ -270,6 +270,7 @@ blocks:
               if test -n "$BRANCH_NAME" && test "$BRANCH_NAME"; then
                 echo "pushing Docker images..."
                 make -j$NPROC latest
+              fi
             - make test
           name: integration test
 
