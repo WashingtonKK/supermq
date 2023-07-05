@@ -108,8 +108,8 @@ blocks:
           name: Mqtt test
   - name: Test proto
     dependencies: []
-    run:
-      when:
+    # run:
+    #   when:
     task:
       jobs:
         - commands:
