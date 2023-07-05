@@ -158,7 +158,7 @@ blocks:
             - echo "Compile check for rabbitmq..."
             - MF_BROKER_TYPE=rabbitmq make http
             - make -j$NPROC
-            name: Proto test
+          name: Proto test
   - name: Test things
     dependencies: []
     run:
