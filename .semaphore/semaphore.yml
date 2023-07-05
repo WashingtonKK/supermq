@@ -111,6 +111,15 @@ blocks:
     # run:
     #   when:
     task:
+      env_vars:
+        - name: GOPATH
+          value: /usr/local/bin/go
+        - name: PATH
+          value: $PATH:/usr/local/bin/go/bin
+        - name: GOBIN
+          value: $GOPATH/bin
+        - name: PATH
+          value: $PATH:$GOBIN
       jobs:
         - commands:
             - NPROC=$(nproc)
