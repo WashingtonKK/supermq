@@ -134,7 +134,7 @@ blocks:
                 export PATH=$PATH:/usr/local/bin/protoc
                 export PATH=$PATH:$HOME/go/bin
               }
-            - setup_protoc()
+            - setup_protoc
             - |
               for p in $(ls pkg/*/*.pb.go); do
                 mv $p $p.tmp
