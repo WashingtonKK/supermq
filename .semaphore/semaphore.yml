@@ -22,7 +22,7 @@ blocks:
             - go test -v -coverprofile=coverage.out ./...
             - go tool cover -html=coverage.out -o coverage.html 
           name: Test Bootstrap
-  - name: Test certs
+  - name: Test Certs
     dependencies: []
     run:
       when: change_in('/certs/')
@@ -34,7 +34,7 @@ blocks:
             - go test -v -coverprofile=coverage.out ./...
             - go tool cover -html=coverage.out -o coverage.html 
           name: Test certs
-  - name: Test http
+  - name: Test Http
     dependencies: []
     run:
       when: change_in('/http/')
@@ -46,7 +46,7 @@ blocks:
             - go test -v -coverprofile=coverage.out
             - go tool cover -html=coverage.out -o coverage.html 
           name: Test http
-  - name: Test logger
+  - name: Test Logger
     dependencies: []
     run:
       when: change_in('/logger/')
@@ -58,7 +58,7 @@ blocks:
             - go test -v -coverprofile=coverage.out ./...
             - go tool cover -html=coverage.out -o coverage.html 
           name: Logger test
-  - name: Test consumers
+  - name: Test Consumers
     dependencies: []
     run:
       when: change_in('/consumers/')
@@ -82,7 +82,7 @@ blocks:
             - make test
           name: All test
 
-  - name: Test lora
+  - name: Test Lora
     dependencies: []
     run:
       when: change_in('/lora/')
@@ -94,7 +94,7 @@ blocks:
             - go test -v -coverprofile=coverage.out
             - go tool cover -html=coverage.out -o coverage.html 
           name: Test lora
-  - name: Test mqtt
+  - name: Test Mqtt
     dependencies: []
     run:
       when: change_in('/mqtt/')
@@ -106,7 +106,7 @@ blocks:
             - go test -v -coverprofile=coverage.out
             - go tool cover -html=coverage.out -o coverage.html 
           name: Mqtt test
-  - name: Test proto
+  - name: Test Proto
     dependencies: []
     # run:
     #   when:
@@ -147,7 +147,7 @@ blocks:
             - MF_BROKER_TYPE=rabbitmq make http
             - make -j$NPROC
           name: Proto test
-  - name: Test things
+  - name: Test Things
     dependencies: []
     run:
       when: change_in('/things/')
@@ -159,7 +159,7 @@ blocks:
             - go test -v -coverprofile=coverage.out ./...
             - go tool cover -html=coverage.out -o coverage.html 
           name: Test things
-  - name: Test users
+  - name: Test Users
     dependencies: []
     run:
       when: change_in('/users/')
@@ -170,7 +170,7 @@ blocks:
             - go test -v -coverprofile=coverage.out ./...
             - go tool cover -html=coverage.out -o coverage.html 
           name: Test users
-  - name: Test twins
+  - name: Test Twins
     dependencies: []
     run:
       when: change_in('/twins/')
@@ -182,7 +182,7 @@ blocks:
             - go test -v -coverprofile=coverage.out ./...
             - go tool cover -html=coverage.out -o coverage.html            
           name: Test twins
-  - name: Test ws
+  - name: Test Ws
     dependencies: []
     run:
       when: change_in('/ws/')
@@ -214,17 +214,17 @@ blocks:
           - GOLANGCI_LINT_VERSION=v1.52.1
   - name: Integration tests
     dependencies:
-      - Test http
-      - Test certs
-      - Test users
-      - Test ws
-      - Test twins
-      - Test things
-      - Test lora
+      - Test Http
+      - Test Certs
+      - Test Users
+      - Test Ws
+      - Test Twins
+      - Test Things
+      - Test Lora
       - Test Bootstrap
-      - Test logger
-      - Test mqtt
-      - Test consumers
+      - Test Logger
+      - Test Mqtt
+      - Test Consumers
     run:
       when: 'change_in([''/http/'', ''/certs/'', ''/things/'', ''/users/''])'
     task:
