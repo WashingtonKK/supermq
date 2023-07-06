@@ -33,7 +33,7 @@ blocks:
             - cd certs
             - go test -v -coverprofile=coverage.out ./...
             - go tool cover -html=coverage.out -o coverage.html 
-          name: Test certs
+          name: Test Certs
   - name: Test Http
     dependencies: []
     run:
@@ -45,7 +45,7 @@ blocks:
             - cd http/api
             - go test -v -coverprofile=coverage.out
             - go tool cover -html=coverage.out -o coverage.html 
-          name: Test http
+          name: Test Http
   - name: Test Logger
     dependencies: []
     run:
@@ -93,7 +93,7 @@ blocks:
             - cd lora
             - go test -v -coverprofile=coverage.out
             - go tool cover -html=coverage.out -o coverage.html 
-          name: Test lora
+          name: Test Lora
   - name: Test Mqtt
     dependencies: []
     run:
@@ -158,7 +158,7 @@ blocks:
             - cd things/
             - go test -v -coverprofile=coverage.out ./...
             - go tool cover -html=coverage.out -o coverage.html 
-          name: Test things
+          name: Test Things
   - name: Test Users
     dependencies: []
     run:
@@ -169,7 +169,7 @@ blocks:
             - checkout
             - go test -v -coverprofile=coverage.out ./...
             - go tool cover -html=coverage.out -o coverage.html 
-          name: Test users
+          name: Test Users
   - name: Test Twins
     dependencies: []
     run:
