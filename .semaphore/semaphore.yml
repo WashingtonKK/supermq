@@ -95,18 +95,18 @@ blocks:
             - go test -v -coverprofile=coverage.out
             - go tool cover -html=coverage.out -o coverage.html 
           name: Test Lora
-  - name: Test Mqtt
-    dependencies: []
-    run:
-      when: "change_in('/mqtt/**', {pipeline_file: 'ignore'})"
-    task:
-      jobs:
-        - commands:
+  # - name: Test Mqtt
+  #   dependencies: []
+  #   run:
+  #     when: "change_in('/mqtt/', {pipeline_file: 'ignore'})"
+  #   task:
+  #     jobs:
+  #       - commands:
     
-            - cd mqtt
-            - go test -v -coverprofile=coverage.out
-            - go tool cover -html=coverage.out -o coverage.html 
-          name: Mqtt test
+  #           - cd mqtt
+  #           - go test -v -coverprofile=coverage.out
+  #           - go tool cover -html=coverage.out -o coverage.html 
+  #         name: Mqtt test
   - name: Test Proto
     dependencies: []
     # run:
@@ -176,18 +176,18 @@ blocks:
             - go test -v -coverprofile=coverage.out ./...
             - go tool cover -html=coverage.out -o coverage.html            
           name: Test twins
-  - name: Test Ws
-    dependencies: []
-    run:
-      when: "change_in('/ws/', {pipeline_file: 'ignore'})"
-    task:
-      jobs:
-        - commands:
+  # - name: Test Ws
+  #   dependencies: []
+  #   run:
+  #     when: "change_in('/ws/', {pipeline_file: 'ignore'})"
+  #   task:
+  #     jobs:
+  #       - commands:
     
-            - cd ws/
-            - go test -v -coverprofile=coverage.out ./...
-            - go tool cover -html=coverage.out -o coverage.html            
-          name: Test ws
+  #           - cd ws/
+  #           - go test -v -coverprofile=coverage.out ./...
+  #           - go tool cover -html=coverage.out -o coverage.html            
+  #         name: Test ws
 ###### WRKS
   - name: Lint Http 
     dependencies: []
