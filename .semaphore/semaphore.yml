@@ -165,18 +165,18 @@ blocks:
             - go test -v -coverprofile=coverage.out ./...
             - go tool cover -html=coverage.out -o coverage.html 
           name: Test Users
-  - name: Test Twins
-    dependencies: []
-    run:
-      when: "change_in('/twins/', {pipeline_file: 'ignore'})"
-    task:
-      jobs:
-        - commands:
+  # - name: Test Twins
+  #   dependencies: []
+  #   run:
+  #     when: "change_in('/twins/', {pipeline_file: 'ignore'})"
+  #   task:
+  #     jobs:
+  #       - commands:
     
-            - cd twins/
-            - go test -v -coverprofile=coverage.out ./...
-            - go tool cover -html=coverage.out -o coverage.html            
-          name: Test twins
+  #           - cd twins/
+  #           - go test -v -coverprofile=coverage.out ./...
+  #           - go tool cover -html=coverage.out -o coverage.html            
+  #         name: Test twins
   # - name: Test Ws
   #   dependencies: []
   #   run:
@@ -271,7 +271,7 @@ blocks:
           name: Test Mqtt          
   - name: Build Mqtt
     dependencies:
-      - Test Http
+      - Test Mqtt
     run:
       when: "change_in('/mqtt/', {pipeline_file: 'ignore'})"
     task:
@@ -387,3 +387,54 @@ blocks:
         - commands:
             - docker push mainflux/coap
           name: Push Coap               
+
+
+  - name: Lint Twins
+    dependencies: []
+    task:
+      jobs:
+        - commands:
+            - |
+              function version_gt() {
+                test "$(printf ''%s\n'' "$@" | sort -V | head -n 1)" != "$1"
+              }
+            - export GOBIN=$HOME/go/bin
+            - 'export PATH=$PATH:$GOBIN'
+    
+            - 'curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOBIN) $GOLANGCI_LINT_VERSION'
+            - 'golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
+          name: Lint Twins
+
+  - name: Test Twins
+    dependencies:
+      - Lint Twins
+    run:
+      when: "change_in('/twins', {pipeline_file: 'ignore'})"
+    task:
+      jobs:
+        - commands:
+    
+            - cd twins
+            - go test -v -coverprofile=coverage.out
+            - go tool cover -html=coverage.out -o coverage.html 
+          name: Test Twins         
+  - name: Build Twins
+    dependencies:
+      - Test Twins
+    run:
+      when: "change_in('/twins', {pipeline_file: 'ignore'})"
+    task:
+      jobs:
+        - commands:
+            - make twins
+          name: Build Twins
+  - name: Push Twins
+    dependencies:
+      - Build Twins
+    run:
+      when: "change_in('/twins', {pipeline_file: 'ignore'})"
+    task:
+      jobs:
+        - commands:
+            - docker push mainflux/twins
+          name: Push twins     
