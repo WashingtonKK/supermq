@@ -24,17 +24,17 @@ global_job_config:
 #     when: "'branch' != 'master'"
 
 blocks:
-  # - name: Test Bootstrap
-  #   dependencies: []
-  #   run:
-  #     when: "change_in('/bootstrap/', {pipeline_file: 'ignore'})"
-  #   task:
-  #     jobs:
-  #       - commands:
-  #           - cd bootstrap
-  #           - go test -v -coverprofile=coverage.out ./...
-  #           - go tool cover -html=coverage.out -o coverage.html 
-  #         name: Test Bootstrap
+  - name: Test Bootstrap
+    dependencies: []
+    run:
+      when: "change_in('/bootstrap/', {pipeline_file: 'ignore'})"
+    task:
+      jobs:
+        - commands:
+            - cd bootstrap
+            - go test -v -coverprofile=coverage.out ./...
+            - go tool cover -html=coverage.out -o coverage.html 
+          name: Test Bootstrap
   - name: Test Certs
     dependencies: []
     run:
@@ -73,7 +73,7 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html 
           name: Consumers test          
   - name: Test all
-    dependencies:
+    dependencies: []
       # - Lint
     run:
       when: "branch = 'master'"
