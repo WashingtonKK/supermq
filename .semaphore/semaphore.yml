@@ -9,6 +9,10 @@ auto_cancel:
   running:
     when: "branch != 'master'"
 
+# fail_fast:
+#   cancel:
+#     when: "'branch' != 'master'"
+
 blocks:
   - name: Test Bootstrap
     dependencies: []
