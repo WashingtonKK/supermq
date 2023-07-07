@@ -49,7 +49,7 @@ blocks:
   - name: Test Logger
     dependencies: []
     run:
-      when: "change_in('/logger/', {pipeline_file: 'ignore'})"
+      when: "change_in('/logger/**/*.go', {pipeline_file: 'ignore'})"
     task:
       jobs:
         - commands:
