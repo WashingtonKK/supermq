@@ -154,17 +154,17 @@ blocks:
             - go test -v -coverprofile=coverage.out ./...
             - go tool cover -html=coverage.out -o coverage.html 
           name: Test Things
-  - name: Test Users
-    dependencies: []
-    run:
-      when: "change_in('/users/', {pipeline_file: 'ignore'})"
-    task:
-      jobs:
-        - commands:
+  # - name: Test Users
+  #   dependencies: []
+  #   run:
+  #     when: "change_in('/users/', {pipeline_file: 'ignore'})"
+  #   task:
+  #     jobs:
+  #       - commands:
     
-            - go test -v -coverprofile=coverage.out ./...
-            - go tool cover -html=coverage.out -o coverage.html 
-          name: Test Users
+  #           - go test -v -coverprofile=coverage.out ./...
+  #           - go tool cover -html=coverage.out -o coverage.html 
+  #         name: Test Users
   # - name: Test Twins
   #   dependencies: []
   #   run:
@@ -437,4 +437,39 @@ blocks:
       jobs:
         - commands:
             - docker push mainflux/twins
-          name: Push twins     
+          name: Push Twins     
+
+
+  - name: Test Users
+    dependencies:
+      - Lint Users
+    run:
+      when: "change_in('/users', {pipeline_file: 'ignore'})"
+    task:
+      jobs:
+        - commands:
+    
+            - cd users
+            - go test -v -coverprofile=coverage.out
+            - go tool cover -html=coverage.out -o coverage.html 
+          name: Test Users        
+  - name: Build Users
+    dependencies:
+      - Test Users
+    run:
+      when: "change_in('/users', {pipeline_file: 'ignore'})"
+    task:
+      jobs:
+        - commands:
+            - make users
+          name: Build Users
+  - name: Push Users
+    dependencies:
+      - Build Users
+    run:
+      when: "change_in('/users', {pipeline_file: 'ignore'})"
+    task:
+      jobs:
+        - commands:
+            - docker push mainflux/users
+          name: Push Users            
