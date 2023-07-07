@@ -142,18 +142,18 @@ blocks:
             - MF_BROKER_TYPE=rabbitmq make http
             - make -j$NPROC
           name: Proto test
-  - name: Test Things
-    dependencies: []
-    run:
-      when: "change_in('/things/', {pipeline_file: 'ignore'})"
-    task:
-      jobs:
-        - commands:
+  # - name: Test Things
+  #   dependencies: []
+  #   run:
+  #     when: "change_in('/things/', {pipeline_file: 'ignore'})"
+  #   task:
+  #     jobs:
+  #       - commands:
     
-            - cd things/
-            - go test -v -coverprofile=coverage.out ./...
-            - go tool cover -html=coverage.out -o coverage.html 
-          name: Test Things
+  #           - cd things/
+  #           - go test -v -coverprofile=coverage.out ./...
+  #           - go tool cover -html=coverage.out -o coverage.html 
+  #         name: Test Things
   # - name: Test Users
   #   dependencies: []
   #   run:
@@ -454,7 +454,6 @@ blocks:
             - 'curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOBIN) $GOLANGCI_LINT_VERSION'
             - 'golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
           name: Lint Users
-
   - name: Test Users
     dependencies:
       - Lint Users
@@ -488,3 +487,54 @@ blocks:
         - commands:
             - docker push mainflux/users
           name: Push Users            
+
+
+
+  - name: Lint Things
+    dependencies: []
+    task:
+      jobs:
+        - commands:
+            - |
+              function version_gt() {
+                test "$(printf ''%s\n'' "$@" | sort -V | head -n 1)" != "$1"
+              }
+            - export GOBIN=$HOME/go/bin
+            - 'export PATH=$PATH:$GOBIN'
+    
+            - 'curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOBIN) $GOLANGCI_LINT_VERSION'
+            - 'golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
+          name: Lint Things
+  - name: Test Things
+    dependencies:
+      - Lint Things
+    run:
+      when: "change_in('/things', {pipeline_file: 'ignore'})"
+    task:
+      jobs:
+        - commands:
+    
+            - cd things
+            - go test -v -coverprofile=coverage.out
+            - go tool cover -html=coverage.out -o coverage.html 
+          name: Test Things        
+  - name: Build Things
+    dependencies:
+      - Test Things
+    run:
+      when: "change_in('/things', {pipeline_file: 'ignore'})"
+    task:
+      jobs:
+        - commands:
+            - make things
+          name: Build Things
+  - name: Push Things
+    dependencies:
+      - Build Things
+    run:
+      when: "change_in('/things', {pipeline_file: 'ignore'})"
+    task:
+      jobs:
+        - commands:
+            - docker push mainflux/things
+          name: Push Things              
