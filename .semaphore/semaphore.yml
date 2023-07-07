@@ -13,7 +13,7 @@ blocks:
   - name: Test Bootstrap
     dependencies: []
     run:
-      when: "change_in('/bootstrap/', {pipeline_file: 'ignore'})"
+      when: "change_in('/bootstrap/**', {pipeline_file: 'ignore'})"
     task:
       jobs:
         - commands:
@@ -37,7 +37,7 @@ blocks:
   - name: Test Http
     dependencies: []
     run:
-      when: "change_in('/http/', {pipeline_file: 'ignore'})"
+      when: "change_in('/http/**', {pipeline_file: 'ignore'})"
     task:
       jobs:
         - commands:
@@ -97,7 +97,7 @@ blocks:
   - name: Test Mqtt
     dependencies: []
     run:
-      when: "change_in('/mqtt/', {pipeline_file: 'ignore'})"
+      when: "change_in('/mqtt/**', {pipeline_file: 'ignore'})"
     task:
       jobs:
         - commands:
