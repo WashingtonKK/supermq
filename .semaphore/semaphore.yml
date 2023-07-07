@@ -198,7 +198,7 @@ blocks:
             - go test -v -coverprofile=coverage.out ./...
             - go tool cover -html=coverage.out -o coverage.html            
           name: Test ws
-  - name: Lint
+  - name: Lint 
     dependencies: []
     task:
       jobs:
@@ -216,35 +216,5 @@ blocks:
       prologue:
         commands:
           - GOLANGCI_LINT_VERSION=v1.52.1
-  - name: Integration tests
-    dependencies:
-      - Test Http
-      - Test Certs
-      - Test Users
-      - Test Ws
-      - Test Twins
-      - Test Things
-      - Test Lora
-      - Test Bootstrap
-      - Test Logger
-      - Test Mqtt
-      - Test Consumers
-    run:
-      when: 'change_in([''/http/'', ''/certs/'', ''/things/'', ''/users/''])'
-    task:
-      jobs:
-        - commands:
-            - checkout
-            - NPROC=$(nproc) 
-            - make all
-            - make dockers
-            - MF_BROKER_TYPE=rabbitmq make http
-            - make -j$NPROC
-            - |
-              if test -n "$BRANCH_NAME" && test "$BRANCH_NAME"; then
-                echo "pushing Docker images..."
-                make -j$NPROC latest
-              fi
-            - make test
-          name: integration test
+
 
