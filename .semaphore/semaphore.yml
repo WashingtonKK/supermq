@@ -115,9 +115,9 @@ blocks:
         commands:
           - NPROC=$(nproc)
           - GO_VERSION=1.19.4
-          - PROTOC_VERSION=21.12
-          - PROTOC_GEN_VERSION=v1.28.1
-          - PROTOC_GRPC_VERSION=v1.2.0
+          - PROTOC_VERSION=23.4
+          - PROTOC_GEN_VERSION=v1.31.0
+          - PROTOC_GRPC_VERSION=v1.3.0
       jobs:
         - commands:
             - checkout
