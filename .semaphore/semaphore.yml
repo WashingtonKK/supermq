@@ -438,7 +438,7 @@ blocks:
             - docker push mainflux/twins
           name: Push Twins     
 
- - name: Lint Users
+  - name: Lint Users
     dependencies: []
     task:
       jobs:
@@ -453,6 +453,7 @@ blocks:
             - 'curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOBIN) $GOLANGCI_LINT_VERSION'
             - 'golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
           name: Lint Users
+
   - name: Test Users
     dependencies:
       - Lint Users
