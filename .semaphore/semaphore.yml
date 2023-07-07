@@ -39,7 +39,8 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html 
           name: Test Certs
   - name: Test Http
-    dependencies: []
+    dependencies:
+      - Lint Http
     run:
       when: "change_in('/http/', {pipeline_file: 'ignore'})"
     task:
@@ -198,7 +199,7 @@ blocks:
             - go test -v -coverprofile=coverage.out ./...
             - go tool cover -html=coverage.out -o coverage.html            
           name: Test ws
-  - name: Lint 
+  - name: Lint Http 
     dependencies: []
     task:
       jobs:
@@ -212,9 +213,21 @@ blocks:
             - checkout
             - 'curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOBIN) $GOLANGCI_LINT_VERSION'
             - 'golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
-          name: Lint
+          name: Lint Http
       prologue:
         commands:
           - GOLANGCI_LINT_VERSION=v1.52.1
 
-
+  - name: Build Http
+    dependencies:
+      - Test Http
+    run:
+      when: "change_in('/http/', {pipeline_file: 'ignore'})"
+    task:
+      jobs:
+        - commands:
+            - checkout
+            - cd http/api
+            - go test -v -coverprofile=coverage.out
+            - go tool cover -html=coverage.out -o coverage.html 
+          name: Build Http
