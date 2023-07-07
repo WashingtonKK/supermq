@@ -13,7 +13,7 @@ blocks:
   - name: Test Bootstrap
     dependencies: []
     run:
-      when: change_in('/bootstrap/')
+      when: change_in('/bootstrap/**/*.go')
     task:
       jobs:
         - commands:
