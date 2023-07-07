@@ -43,7 +43,7 @@ var channelPartRegExp = regexp.MustCompile(`^/channels/([\w\-]+)/messages(/[^?]*
 // MakeHandler returns a HTTP handler for API endpoints.
 func MakeHandler(svc adapter.Service) http.Handler {
 	opts := []kithttp.ServerOption{
-		kithttp.ServerErrorEncoder(encodeError),
+		kithttp.ServerErrorEncoderr(encodeError),
 	}
 
 	r := bone.New()
