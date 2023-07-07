@@ -9,23 +9,32 @@ auto_cancel:
   running:
     when: "branch != 'master'"
 
+global_job_config:
+  prologue:
+    commands:
+      - checkout
+      - NPROC=$(nproc)
+      - GO_VERSION=1.19.4
+      - PROTOC_VERSION=23.3
+      - PROTOC_GEN_VERSION=v1.31.0
+      - PROTOC_GRPC_VERSION=v1.3.0     
+      - GOLANGCI_LINT_VERSION=v1.52.1 
 # fail_fast:
 #   cancel:
 #     when: "'branch' != 'master'"
 
 blocks:
-  - name: Test Bootstrap
-    dependencies: []
-    run:
-      when: "change_in('/bootstrap/**', {pipeline_file: 'ignore'})"
-    task:
-      jobs:
-        - commands:
-            - checkout
-            - cd bootstrap
-            - go test -v -coverprofile=coverage.out ./...
-            - go tool cover -html=coverage.out -o coverage.html 
-          name: Test Bootstrap
+  # - name: Test Bootstrap
+  #   dependencies: []
+  #   run:
+  #     when: "change_in('/bootstrap/', {pipeline_file: 'ignore'})"
+  #   task:
+  #     jobs:
+  #       - commands:
+  #           - cd bootstrap
+  #           - go test -v -coverprofile=coverage.out ./...
+  #           - go tool cover -html=coverage.out -o coverage.html 
+  #         name: Test Bootstrap
   - name: Test Certs
     dependencies: []
     run:
@@ -33,24 +42,11 @@ blocks:
     task:
       jobs:
         - commands:
-            - checkout
+            - ls
             - cd certs
             - go test -v -coverprofile=coverage.out ./...
             - go tool cover -html=coverage.out -o coverage.html 
           name: Test Certs
-  - name: Test Http
-    dependencies:
-      - Lint Http
-    run:
-      when: "change_in('/http/**', {pipeline_file: 'ignore'})"
-    task:
-      jobs:
-        - commands:
-            - checkout
-            - cd http/api
-            - go test -v -coverprofile=coverage.out
-            - go tool cover -html=coverage.out -o coverage.html 
-          name: Test Http
   - name: Test Logger
     dependencies: []
     run:
@@ -58,7 +54,7 @@ blocks:
     task:
       jobs:
         - commands:
-            - checkout
+    
             - cd logger
             - go test -v -coverprofile=coverage.out ./...
             - go tool cover -html=coverage.out -o coverage.html 
@@ -70,7 +66,7 @@ blocks:
     task:
       jobs:
         - commands:
-            - checkout
+    
             - cd consumers
             - go test -v -coverprofile=coverage.out ./...
             - go tool cover -html=coverage.out -o coverage.html 
@@ -83,7 +79,7 @@ blocks:
     task:
       jobs:
         - commands:
-            - checkout
+    
             - make test
           name: All test
 
@@ -94,7 +90,7 @@ blocks:
     task:
       jobs:
         - commands:
-            - checkout
+    
             - cd lora
             - go test -v -coverprofile=coverage.out
             - go tool cover -html=coverage.out -o coverage.html 
@@ -106,7 +102,7 @@ blocks:
     task:
       jobs:
         - commands:
-            - checkout
+    
             - cd mqtt
             - go test -v -coverprofile=coverage.out
             - go tool cover -html=coverage.out -o coverage.html 
@@ -116,16 +112,9 @@ blocks:
     # run:
     #   when:
     task:
-      prologue:
-        commands:
-          - NPROC=$(nproc)
-          - GO_VERSION=1.19.4
-          - PROTOC_VERSION=23.3
-          - PROTOC_GEN_VERSION=v1.31.0
-          - PROTOC_GRPC_VERSION=v1.3.0
-      jobs:
+       jobs:
         - commands:
-            - checkout
+    
             - |
               setup_protoc() {
                 PROTOC_ZIP=protoc-$PROTOC_VERSION-linux-x86_64.zip
@@ -159,7 +148,7 @@ blocks:
     task:
       jobs:
         - commands:
-            - checkout
+    
             - cd things/
             - go test -v -coverprofile=coverage.out ./...
             - go tool cover -html=coverage.out -o coverage.html 
@@ -171,7 +160,7 @@ blocks:
     task:
       jobs:
         - commands:
-            - checkout
+    
             - go test -v -coverprofile=coverage.out ./...
             - go tool cover -html=coverage.out -o coverage.html 
           name: Test Users
@@ -182,7 +171,7 @@ blocks:
     task:
       jobs:
         - commands:
-            - checkout
+    
             - cd twins/
             - go test -v -coverprofile=coverage.out ./...
             - go tool cover -html=coverage.out -o coverage.html            
@@ -194,11 +183,12 @@ blocks:
     task:
       jobs:
         - commands:
-            - checkout
+    
             - cd ws/
             - go test -v -coverprofile=coverage.out ./...
             - go tool cover -html=coverage.out -o coverage.html            
           name: Test ws
+
   - name: Lint Http 
     dependencies: []
     task:
@@ -210,13 +200,24 @@ blocks:
               }
             - export GOBIN=$HOME/go/bin
             - 'export PATH=$PATH:$GOBIN'
-            - checkout
+    
             - 'curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOBIN) $GOLANGCI_LINT_VERSION'
             - 'golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
           name: Lint Http
-      prologue:
-        commands:
-          - GOLANGCI_LINT_VERSION=v1.52.1
+
+  - name: Test Http
+    dependencies:
+      - Lint Http
+    run:
+      when: "change_in('/http/', {pipeline_file: 'ignore'})"
+    task:
+      jobs:
+        - commands:
+    
+            - cd http/api
+            - go test -v -coverprofile=coverage.out
+            - go tool cover -html=coverage.out -o coverage.html 
+          name: Test Http          
   - name: Build Http
     dependencies:
       - Test Http
@@ -225,10 +226,7 @@ blocks:
     task:
       jobs:
         - commands:
-            - checkout
-            - cd http/api
-            - go test -v -coverprofile=coverage.out
-            - go tool cover -html=coverage.out -o coverage.html 
+            - make http
           name: Build Http
   - name: Push Http
     dependencies:
@@ -238,8 +236,5 @@ blocks:
     task:
       jobs:
         - commands:
-            - checkout
-            - cd http/api
-            - go test -v -coverprofile=coverage.out
-            - go tool cover -html=coverage.out -o coverage.html 
+            - docker push mainflux/http
           name: Push Http
