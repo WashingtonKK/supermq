@@ -188,7 +188,7 @@ blocks:
             - go test -v -coverprofile=coverage.out ./...
             - go tool cover -html=coverage.out -o coverage.html            
           name: Test ws
-
+###### WRKS
   - name: Lint Http 
     dependencies: []
     task:
@@ -238,3 +238,151 @@ blocks:
         - commands:
             - docker push mainflux/http
           name: Push Http
+
+
+  - name: Lint Mqtt
+    dependencies: []
+    task:
+      jobs:
+        - commands:
+            - |
+              function version_gt() {
+                test "$(printf ''%s\n'' "$@" | sort -V | head -n 1)" != "$1"
+              }
+            - export GOBIN=$HOME/go/bin
+            - 'export PATH=$PATH:$GOBIN'
+    
+            - 'curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOBIN) $GOLANGCI_LINT_VERSION'
+            - 'golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
+          name: Lint Mqtt
+  - name: Test Mqtt
+    dependencies:
+      - Lint Mqtt
+    run:
+      when: "change_in('/mqtt/', {pipeline_file: 'ignore'})"
+    task:
+      jobs:
+        - commands:
+    
+            - cd http/api
+            - go test -v -coverprofile=coverage.out
+            - go tool cover -html=coverage.out -o coverage.html 
+          name: Test Mqtt          
+  - name: Build Mqtt
+    dependencies:
+      - Test Http
+    run:
+      when: "change_in('/mqtt/', {pipeline_file: 'ignore'})"
+    task:
+      jobs:
+        - commands:
+            - make mqtt
+          name: Build Mqtt
+  - name: Push Mqtt
+    dependencies:
+      - Build Mqtt
+    run:
+      when: "change_in('/mqtt/', {pipeline_file: 'ignore'})"
+    task:
+      jobs:
+        - commands:
+            - docker push mainflux/mqtt
+          name: Push Mqtt         
+
+
+  - name: Lint Ws
+    dependencies: []
+    task:
+      jobs:
+        - commands:
+            - |
+              function version_gt() {
+                test "$(printf ''%s\n'' "$@" | sort -V | head -n 1)" != "$1"
+              }
+            - export GOBIN=$HOME/go/bin
+            - 'export PATH=$PATH:$GOBIN'
+    
+            - 'curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOBIN) $GOLANGCI_LINT_VERSION'
+            - 'golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
+          name: Lint Ws
+  - name: Test Ws
+    dependencies:
+      - Lint Ws
+    run:
+      when: "change_in('/ws/', {pipeline_file: 'ignore'})"
+    task:
+      jobs:
+        - commands:
+            - cd ws
+            - go test -v -coverprofile=coverage.out
+            - go tool cover -html=coverage.out -o coverage.html 
+          name: Test Ws         
+  - name: Build Ws
+    dependencies:
+      - Test Ws
+    run:
+      when: "change_in('/ws/', {pipeline_file: 'ignore'})"
+    task:
+      jobs:
+        - commands:
+            - make ws
+          name: Build Ws
+  - name: Push Ws
+    dependencies:
+      - Build Ws
+    run:
+      when: "change_in('/ws/', {pipeline_file: 'ignore'})"
+    task:
+      jobs:
+        - commands:
+            - docker push mainflux/ws
+          name: Push Ws        
+
+
+  - name: Lint Coap
+    dependencies: []
+    task:
+      jobs:
+        - commands:
+            - |
+              function version_gt() {
+                test "$(printf ''%s\n'' "$@" | sort -V | head -n 1)" != "$1"
+              }
+            - export GOBIN=$HOME/go/bin
+            - 'export PATH=$PATH:$GOBIN'
+    
+            - 'curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOBIN) $GOLANGCI_LINT_VERSION'
+            - 'golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
+          name: Lint Ws
+  - name: Test Coap
+    dependencies:
+      - Lint Coap
+    run:
+      when: "change_in('/coap/', {pipeline_file: 'ignore'})"
+    task:
+      jobs:
+        - commands:
+            - cd coap
+            - go test -v -coverprofile=coverage.out
+            - go tool cover -html=coverage.out -o coverage.html 
+          name: Test Coap        
+  - name: Build Coap
+    dependencies:
+      - Test Coap
+    run:
+      when: "change_in('/coap/', {pipeline_file: 'ignore'})"
+    task:
+      jobs:
+        - commands:
+            - make coap
+          name: Build Coap
+  - name: Push Coap
+    dependencies:
+      - Build Coap
+    run:
+      when: "change_in('/coap/', {pipeline_file: 'ignore'})"
+    task:
+      jobs:
+        - commands:
+            - docker push mainflux/coap
+          name: Push Coap               
