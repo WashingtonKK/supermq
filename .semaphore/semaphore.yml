@@ -84,18 +84,18 @@ blocks:
             - make test
           name: All test
 
-  - name: Test Lora
-    dependencies: []
-    run:
-      when: "change_in('/lora/', {pipeline_file: 'ignore'})"
-    task:
-      jobs:
-        - commands:
+  # - name: Test Lora
+  #   dependencies: []
+  #   run:
+  #     when: "change_in('/lora/', {pipeline_file: 'ignore'})"
+  #   task:
+  #     jobs:
+  #       - commands:
     
-            - cd lora
-            - go test -v -coverprofile=coverage.out
-            - go tool cover -html=coverage.out -o coverage.html 
-          name: Test Lora
+  #           - cd lora
+  #           - go test -v -coverprofile=coverage.out
+  #           - go tool cover -html=coverage.out -o coverage.html 
+  #         name: Test Lora
   # - name: Test Mqtt
   #   dependencies: []
   #   run:
@@ -538,3 +538,53 @@ blocks:
         - commands:
             - docker push mainflux/things
           name: Push Things              
+
+
+  - name: Lint Lora
+    dependencies: []
+    task:
+      jobs:
+        - commands:
+            - |
+              function version_gt() {
+                test "$(printf ''%s\n'' "$@" | sort -V | head -n 1)" != "$1"
+              }
+            - export GOBIN=$HOME/go/bin
+            - 'export PATH=$PATH:$GOBIN'
+    
+            - 'curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOBIN) $GOLANGCI_LINT_VERSION'
+            - 'golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
+          name: Lint Lora
+  - name: Test Lora
+    dependencies:
+      - Lint Lora
+    run:
+      when: "change_in('/lora', {pipeline_file: 'ignore'})"
+    task:
+      jobs:
+        - commands:
+    
+            - cd lora
+            - go test -v -coverprofile=coverage.out
+            - go tool cover -html=coverage.out -o coverage.html 
+          name: Test Lora
+  - name: Build Lora
+    dependencies:
+      - Test Lora
+    run:
+      when: "change_in('/lora', {pipeline_file: 'ignore'})"
+    task:
+      jobs:
+        - commands:
+            - make lora
+          name: Build Lora
+  - name: Push Lora
+    dependencies:
+      - Build Lora
+    run:
+      when: "change_in('/lora', {pipeline_file: 'ignore'})"
+    task:
+      jobs:
+        - commands:
+            - docker push mainflux/lora
+          name: Push Lora                
