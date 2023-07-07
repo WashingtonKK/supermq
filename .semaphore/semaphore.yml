@@ -59,29 +59,18 @@ blocks:
             - go test -v -coverprofile=coverage.out ./...
             - go tool cover -html=coverage.out -o coverage.html 
           name: Logger test
-  - name: Test Consumers
-    dependencies: []
-    run:
-      when: "change_in('/consumers/', {pipeline_file: 'ignore'})"
-    task:
-      jobs:
-        - commands:
+  # - name: Test Consumers
+  #   dependencies: []
+  #   run:
+  #     when: "change_in('/consumers/', {pipeline_file: 'ignore'})"
+  #   task:
+  #     jobs:
+  #       - commands:
     
-            - cd consumers
-            - go test -v -coverprofile=coverage.out ./...
-            - go tool cover -html=coverage.out -o coverage.html 
-          name: Consumers test          
-  - name: Test all
-    dependencies: []
-      # - Lint
-    run:
-      when: "branch = 'master'"
-    task:
-      jobs:
-        - commands:
-    
-            - make test
-          name: All test
+  #           - cd consumers
+  #           - go test -v -coverprofile=coverage.out ./...
+  #           - go tool cover -html=coverage.out -o coverage.html 
+  #         name: Consumers test          
 
   # - name: Test Lora
   #   dependencies: []
@@ -189,6 +178,18 @@ blocks:
   #           - go tool cover -html=coverage.out -o coverage.html            
   #         name: Test ws
 ###### WRKS
+  - name: Test all
+    dependencies: []
+      # - Lint
+    run:
+      when: "branch = 'master'"
+    task:
+      jobs:
+        - commands:
+    
+            - make test
+          name: All test
+
   - name: Lint Http 
     dependencies: []
     task:
@@ -587,3 +588,54 @@ blocks:
         - commands:
             - docker push mainflux/lora
           name: Push Lora                
+
+
+
+  - name: Lint Consumers
+    dependencies: []
+    task:
+      jobs:
+        - commands:
+            - |
+              function version_gt() {
+                test "$(printf ''%s\n'' "$@" | sort -V | head -n 1)" != "$1"
+              }
+            - export GOBIN=$HOME/go/bin
+            - 'export PATH=$PATH:$GOBIN'
+    
+            - 'curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOBIN) $GOLANGCI_LINT_VERSION'
+            - 'golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
+          name: Lint Consumers
+  - name: Test Consumers
+    dependencies:
+      - Lint Consumers
+    run:
+      when: "change_in('/consumers', {pipeline_file: 'ignore'})"
+    task:
+      jobs:
+        - commands:
+    
+            - cd consumers
+            - go test -v -coverprofile=coverage.out
+            - go tool cover -html=coverage.out -o coverage.html 
+          name: Test Consumers
+  - name: Build Consumers
+    dependencies:
+      - Test Consumers
+    run:
+      when: "change_in('/consumers', {pipeline_file: 'ignore'})"
+    task:
+      jobs:
+        - commands:
+            - make consumers
+          name: Build Consumers
+  - name: Push Consumers
+    dependencies:
+      - Build Consumers
+    run:
+      when: "change_in('/consumers', {pipeline_file: 'ignore'})"
+    task:
+      jobs:
+        - commands:
+            - docker push mainflux/consumers
+          name: Push Consumers              
