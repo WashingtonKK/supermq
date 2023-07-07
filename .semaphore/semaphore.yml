@@ -13,7 +13,7 @@ blocks:
   - name: Test Bootstrap
     dependencies: []
     run:
-      when: change_in('/bootstrap/**/*.go')
+      when: "change_in('/bootstrap/**/*.go', {pipeline_file: 'ignore'})"
     task:
       jobs:
         - commands:
