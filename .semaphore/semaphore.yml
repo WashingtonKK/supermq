@@ -206,6 +206,18 @@ blocks:
             - 'curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOBIN) $GOLANGCI_LINT_VERSION'
             - 'golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
           name: Lint Http
+            - |
+              function version_gt() {
+                test "$(printf ''%s\n'' "$@" | sort -V | head -n 1)" != "$1"
+              }
+            - export GOBIN=$HOME/go/bin
+            - 'export PATH=$PATH:$GOBIN'
+    
+            - 'curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOBIN) $GOLANGCI_LINT_VERSION'
+            - 'golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
+          name: Lint Mqt
+
+
 
   - name: Test Http
     dependencies:
@@ -240,6 +252,7 @@ blocks:
         - commands:
             - docker push mainflux/http
           name: Push Http
+
 
 
   - name: Lint Mqtt
