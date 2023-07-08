@@ -734,7 +734,7 @@ blocks:
           name: Build Certs
   - name: Push Certs
     dependencies:
-      - Build Logger
+      - Build Certs
     run:
       when: "change_in('/certs', {pipeline_file: 'ignore'})"
     task:
