@@ -180,8 +180,8 @@ blocks:
   #         name: Test ws
 ###### WRKS
   - name: Test all
-    dependencies: []
-      # - Lint
+    dependencies:
+      - Test Proto
     run:
       when: "branch = 'master'"
     task:
