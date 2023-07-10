@@ -72,29 +72,25 @@ blocks:
     dependencies:
       - Setup
       - Setup Protobuf
+    run:
+      when: 'change_in(''/mqtt/'', {pipeline_file: ''ignore''})'     
     task:
       jobs:
-        - commands:
+        - name: Lint Mqtt
+          commands:
             - cd mqtt
             - cache restore linter
             - ls -a
             - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
-          name: Lint Mqtt
-      env_vars: []
-  - name: Test Mqtt
-    dependencies:
-      - Lint Mqtt
-    run:
-      when: 'change_in(''/mqtt/'', {pipeline_file: ''ignore''})'
-    task:
-      jobs:
-        - commands:
+        - name: Test Mqtt
+          commands:
             - cd mqtt
-            - go test ./... --race
-          name: Test Mqtt
+            - go test ./... --race -v -coverprofile=coverage.out
+            - go tool cover -html=coverage.out -o coverage.html
+      env_vars: []
+
   - name: Build Mqtt
     dependencies:
-      - Test Mqtt
       - Lint Mqtt
     run:
       when: 'change_in(''/mqtt/'', {pipeline_file: ''ignore''})'
