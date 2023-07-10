@@ -163,7 +163,7 @@ blocks:
 ##########
   - name: Test all
     dependencies:
-      - Setup Proto
+      - Setup Protobuf
     run:
       when: "branch = 'master'"
     task:
