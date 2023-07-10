@@ -76,7 +76,7 @@ blocks:
       when: 'change_in(''/mqtt/'', {pipeline_file: ''ignore''})'     
     task:
       jobs:
-        - name: Lint Mqtt
+        - name: Lint and Test Mqtt
           commands:
             - cd mqtt
             - cache restore linter
@@ -88,10 +88,9 @@ blocks:
             - go test ./... --race -v -coverprofile=coverage.out
             - go tool cover -html=coverage.out -o coverage.html
       env_vars: []
-
   - name: Build Mqtt
     dependencies:
-      - Lint Mqtt
+      - Lint and Test Mqtt
     run:
       when: 'change_in(''/mqtt/'', {pipeline_file: ''ignore''})'
     task:
@@ -109,31 +108,25 @@ blocks:
         - commands:
             - docker push mainflux/mqtt
           name: Push Mqtt     
-  - name: Lint Http
+  - name: Lint and Test Http
     dependencies:
       - Setup Protobuf
     task:
       jobs:
-        - commands:
+        - name: Lint Http
+          commands:
             - cd http
             - cache restore linter
+            - ls -a
             - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
-          name: Lint Http
-  - name: Test Http
-    dependencies:
-      - Lint Http
-    run:
-      when: 'change_in(''/http/'', {pipeline_file: ''ignore''})'
-    task:
-      jobs:
-        - commands:
-            - cd http/api
-            - go test -v -coverprofile=coverage.out
+        - name: Test Http
+          commands:
+            - cd http
+            - go test ./... --race -v -coverprofile=coverage.out
             - go tool cover -html=coverage.out -o coverage.html
-          name: Test Http
   - name: Build Http
     dependencies:
-      - Test Http
+      - Lint and Test Http
     run:
       when: 'change_in(''/http/'', {pipeline_file: ''ignore''})'
     task:
@@ -168,30 +161,24 @@ blocks:
             - make test
           name: All test
 
-  - name: Lint Ws
+  - name: Lint and Test Ws
     dependencies: []
     task:
       jobs:
-        - commands:
+        - name: Lint Wa
+          commands:
             - cd ws
             - cache restore linter
+            - ls -a
             - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
-          name: Lint Ws
-  - name: Test Ws
-    dependencies:
-      - Lint Ws
-    run:
-      when: "change_in('/ws/', {pipeline_file: 'ignore'})"
-    task:
-      jobs:
-        - commands:
+        - name: Test Ws
+          commands:
             - cd ws
-            - go test -v -coverprofile=coverage.out
-            - go tool cover -html=coverage.out -o coverage.html 
-          name: Test Ws         
+            - go test ./... --race -v -coverprofile=coverage.out
+            - go tool cover -html=coverage.out -o coverage.html      
   - name: Build Ws
     dependencies:
-      - Test Ws
+      - Lint and Test Ws
     run:
       when: "change_in('/ws/', {pipeline_file: 'ignore'})"
     task:
@@ -211,30 +198,24 @@ blocks:
           name: Push Ws        
 
 
-  - name: Lint Coap
+  - name: Lint and Test Coap
     dependencies: []
     task:
       jobs:
-        - commands:
+        - name: Lint Coap
+          commands:
             - cd coap
             - cache restore linter
+            - ls -a
             - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
-          name: Lint Ws
-  - name: Test Coap
-    dependencies:
-      - Lint Coap
-    run:
-      when: "change_in('/coap/', {pipeline_file: 'ignore'})"
-    task:
-      jobs:
-        - commands:
+        - name: Test Coap
+          commands:
             - cd coap
-            - go test -v -coverprofile=coverage.out
-            - go tool cover -html=coverage.out -o coverage.html 
-          name: Test Coap        
+            - go test ./... --race -v -coverprofile=coverage.out
+            - go tool cover -html=coverage.out -o coverage.html      
   - name: Build Coap
     dependencies:
-      - Test Coap
+      - Lint and Test Coap
     run:
       when: "change_in('/coap/', {pipeline_file: 'ignore'})"
     task:
@@ -254,31 +235,24 @@ blocks:
           name: Push Coap               
 
 
-  - name: Lint Twins
+  - name: Lint and Test Twins
     dependencies: []
     task:
       jobs:
-        - commands:
+        - name: Lint Twins
+          commands:
             - cd twins
             - cache restore linter
+            - ls -a
             - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
-          name: Lint Twins
-
-  - name: Test Twins
-    dependencies:
-      - Lint Twins
-    run:
-      when: "change_in('/twins', {pipeline_file: 'ignore'})"
-    task:
-      jobs:
-        - commands:
+        - name: Test Twins
+          commands:
             - cd twins
-            - go test -v -coverprofile=coverage.out
-            - go tool cover -html=coverage.out -o coverage.html 
-          name: Test Twins         
+            - go test ./... --race -v -coverprofile=coverage.out
+            - go tool cover -html=coverage.out -o coverage.html        
   - name: Build Twins
     dependencies:
-      - Test Twins
+      - Lint and Test Twins
     run:
       when: "change_in('/twins', {pipeline_file: 'ignore'})"
     task:
@@ -297,30 +271,24 @@ blocks:
             - docker push mainflux/twins
           name: Push Twins     
 
-  - name: Lint Users
+  - name: Lint and Test Users
     dependencies: []
     task:
       jobs:
-        - commands:
+        - name: Lint Users
+          commands:
             - cd users
             - cache restore linter
+            - ls -a
             - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
-          name: Lint Users
-  - name: Test Users
-    dependencies:
-      - Lint Users
-    run:
-      when: "change_in('/users', {pipeline_file: 'ignore'})"
-    task:
-      jobs:
-        - commands:
+        - name: Test Users
+          commands:
             - cd users
-            - go test -v -coverprofile=coverage.out
-            - go tool cover -html=coverage.out -o coverage.html 
-          name: Test Users        
+            - go test ./... --race -v -coverprofile=coverage.out
+            - go tool cover -html=coverage.out -o coverage.html     
   - name: Build Users
     dependencies:
-      - Test Users
+      - Lint and Test Users
     run:
       when: "change_in('/users', {pipeline_file: 'ignore'})"
     task:
@@ -341,30 +309,24 @@ blocks:
 
 
 
-  - name: Lint Things
+  - name: Lint and Test Things
     dependencies: []
     task:
       jobs:
-        - commands:
+        - name: Lint Things
+          commands:
             - cd things
             - cache restore linter
+            - ls -a
             - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
-          name: Lint Things
-  - name: Test Things
-    dependencies:
-      - Lint Things
-    run:
-      when: "change_in('/things', {pipeline_file: 'ignore'})"
-    task:
-      jobs:
-        - commands:
+        - name: Test Things
+          commands:
             - cd things
-            - go test -v -coverprofile=coverage.out
-            - go tool cover -html=coverage.out -o coverage.html 
-          name: Test Things        
+            - go test ./... --race -v -coverprofile=coverage.out
+            - go tool cover -html=coverage.out -o coverage.html       
   - name: Build Things
     dependencies:
-      - Test Things
+      - Lint and Test Things
     run:
       when: "change_in('/things', {pipeline_file: 'ignore'})"
     task:
@@ -384,30 +346,24 @@ blocks:
           name: Push Things              
 
 
-  - name: Lint Lora
+  - name: Lint and Test Lora
     dependencies: []
     task:
       jobs:
-        - commands:
+        - name: Lint Lora
+          commands:
             - cd lora
             - cache restore linter
+            - ls -a
             - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
-          name: Lint Lora
-  - name: Test Lora
-    dependencies:
-      - Lint Lora
-    run:
-      when: "change_in('/lora', {pipeline_file: 'ignore'})"
-    task:
-      jobs:
-        - commands:
+        - name: Test Lora
+          commands:
             - cd lora
-            - go test -v -coverprofile=coverage.out
-            - go tool cover -html=coverage.out -o coverage.html 
-          name: Test Lora
+            - go test ./... --race -v -coverprofile=coverage.out
+            - go tool cover -html=coverage.out -o coverage.html
   - name: Build Lora
     dependencies:
-      - Test Lora
+      - Lint and Test Lora
     run:
       when: "change_in('/lora', {pipeline_file: 'ignore'})"
     task:
@@ -426,31 +382,24 @@ blocks:
             - docker push mainflux/lora
           name: Push Lora                
 
-  - name: Lint Consumers
+  - name: Lint and Test Consumers
     dependencies: []
     task:
       jobs:
-        - commands:
-            - cd consumers
+        - name: Lint Consumers
+          commands:
+            - cd mqtt
             - cache restore linter
+            - ls -a
             - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
-          name: Lint Consumers
-  - name: Test Consumers
-    dependencies:
-      - Lint Consumers
-    run:
-      when: "change_in('/consumers', {pipeline_file: 'ignore'})"
-    task:
-      jobs:
-        - commands:
-    
+        - name: Test Consumers
+          commands:
             - cd consumers
-            - go test -v -coverprofile=coverage.out
-            - go tool cover -html=coverage.out -o coverage.html 
-          name: Test Consumers
+            - go test ./... --race -v -coverprofile=coverage.out
+            - go tool cover -html=coverage.out -o coverage.html
   - name: Build Consumers
     dependencies:
-      - Test Consumers
+      - Lint and Test Consumers
     run:
       when: "change_in('/consumers', {pipeline_file: 'ignore'})"
     task:
@@ -471,31 +420,24 @@ blocks:
 
 
 
-  - name: Lint Logger
+  - name: Lint and Test Logger
     dependencies: []
     task:
       jobs:
-        - commands:
+        - name: Lint Logger
+          commands:
             - cd logger
             - cache restore linter
+            - ls -a
             - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
-          name: Lint Logger
-  - name: Test Logger
-    dependencies:
-      - Lint Logger
-    run:
-      when: "change_in('/logger', {pipeline_file: 'ignore'})"
-    task:
-      jobs:
-        - commands:
-    
+        - name: Test Mqtt
+          commands:
             - cd logger
-            - go test -v -coverprofile=coverage.out
-            - go tool cover -html=coverage.out -o coverage.html 
-          name: Test Logger
+            - go test ./... --race -v -coverprofile=coverage.out
+            - go tool cover -html=coverage.out -o coverage.html
   - name: Build Logger
     dependencies:
-      - Test Logger
+      - Lint and Test Logger
     run:
       when: "change_in('/logger', {pipeline_file: 'ignore'})"
     task:
@@ -515,31 +457,24 @@ blocks:
           name: Push Logger          
 
 
-
   - name: Lint Certs
     dependencies: []
     task:
       jobs:
-        - commands:
+        - name: Lint Certs
+          commands:
             - cd certs
             - cache restore linter
+            - ls -a
             - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
-          name: Lint Certs
-  - name: Test Certs
-    dependencies:
-      - Lint Certs
-    run:
-      when: "change_in('/certs', {pipeline_file: 'ignore'})"
-    task:
-      jobs:
-        - commands:
+        - name: Test Certs
+          commands:
             - cd certs
-            - go test -v -coverprofile=coverage.out
-            - go tool cover -html=coverage.out -o coverage.html 
-          name: Test Certs
+            - go test ./... --race -v -coverprofile=coverage.out
+            - go tool cover -html=coverage.out -o coverage.html
   - name: Build Certs
     dependencies:
-      - Test Certs
+      - Lint and Test Certs
     run:
       when: "change_in('/certs', {pipeline_file: 'ignore'})"
     task:
@@ -558,30 +493,24 @@ blocks:
             - docker push mainflux/certs
           name: Push Certs    
 
-  - name: Lint Bootstrap
+  - name: Lint and Test Bootstrap
     dependencies: []
     task:
       jobs:
-        - commands:
+        - name: Lint Mqtt
+          commands:
             - cd bootstrap
             - cache restore linter
+            - ls -a
             - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
-          name: Lint Bootstrap
-  - name: Test Bootstrap
-    dependencies:
-      - Lint Bootstrap
-    run:
-      when: "change_in('/bootstrap', {pipeline_file: 'ignore'})"
-    task:
-      jobs:
-        - commands:
+        - name: Test Bootstrap
+          commands:
             - cd bootstrap
-            - go test -v -coverprofile=coverage.out
-            - go tool cover -html=coverage.out -o coverage.html 
-          name: Test Bootstrap
+            - go test ./... --race -v -coverprofile=coverage.out
+            - go tool cover -html=coverage.out -o coverage.html
   - name: Build Bootstrap
     dependencies:
-      - Test Bootstrap
+      - Lint and Test Bootstrap
     run:
       when: "change_in('/bootstrap', {pipeline_file: 'ignore'})"
     task:
