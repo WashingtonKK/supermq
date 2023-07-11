@@ -64,7 +64,7 @@ blocks:
             - MF_BROKER_TYPE=rabbitmq make http
           name: Setup Protobuf  
 #MQTT    
-  - name: Lint and Test Mqtt
+  - name: Lint and Test MQTT
     dependencies:
       - Setup
       - Setup Protobuf
@@ -72,13 +72,13 @@ blocks:
       when: 'change_in(''/mqtt/'', {pipeline_file: ''ignore''})'     
     task:
       jobs:
-        - name: Lint Mqtt
+        - name: Lint MQTT
           commands:
             - cd mqtt
             - cache restore linter
             - ls -a
             - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
-        - name: Test Mqtt
+        - name: Test MQTT
           commands:
             - cd mqtt
             - go test ./... --race -v -coverprofile=coverage.out
@@ -88,7 +88,7 @@ blocks:
       env_vars: []
   - name: Push MQTT
     dependencies:
-      - Lint and Test Mqtt
+      - Lint and Test MQTT
     run:
       when: 'change_in(''/mqtt/'', {pipeline_file: ''ignore''})'
     task:
@@ -100,6 +100,8 @@ blocks:
   - name: Lint and Test HTTP
     dependencies:
       - Setup Protobuf
+    run:
+      when: 'change_in(''/mqtt/'', {pipeline_file: ''ignore''})'  
     task:
       jobs:
         - name: Lint HTTP
@@ -140,6 +142,8 @@ blocks:
 
   - name: Lint and Test WS
     dependencies: []
+    run:
+      when: 'change_in(''/ws/'', {pipeline_file: ''ignore''})'      
     task:
       jobs:
         - name: Lint WS
@@ -169,6 +173,8 @@ blocks:
 
   - name: Lint and Test CoAp
     dependencies: []
+    run:
+      when: 'change_in(''/coap/'', {pipeline_file: ''ignore''})'      
     task:
       jobs:
         - name: Lint CoAp
@@ -198,6 +204,8 @@ blocks:
 
   - name: Lint and Test Twins
     dependencies: []
+    run:
+      when: 'change_in(''/twins/'', {pipeline_file: ''ignore''})'      
     task:
       jobs:
         - name: Lint Twins
@@ -227,6 +235,8 @@ blocks:
 
   - name: Lint and Test Users
     dependencies: []
+    run:
+      when: "change_in('/users/', {pipeline_file: 'ignore'})"    
     task:
       jobs:
         - name: Lint Users
@@ -246,7 +256,7 @@ blocks:
     dependencies:
       - Lint and Test Users
     run:
-      when: "change_in('/users', {pipeline_file: 'ignore'})"
+      when: "change_in('/users/', {pipeline_file: 'ignore'})"
     task:
       jobs:
         - commands:
@@ -256,6 +266,8 @@ blocks:
 
   - name: Lint and Test Things
     dependencies: []
+    run:
+      when: "change_in('/things', {pipeline_file: 'ignore'})"    
     task:
       jobs:
         - name: Lint Things
@@ -285,6 +297,8 @@ blocks:
 
   - name: Lint and Test LoRa
     dependencies: []
+    run:
+      when: "change_in('/lora', {pipeline_file: 'ignore'})"
     task:
       jobs:
         - name: Lint LoRa
@@ -314,6 +328,8 @@ blocks:
 
   - name: Lint and Test Consumers
     dependencies: []
+    run:
+      when: "change_in('/consumers', {pipeline_file: 'ignore'})"    
     task:
       jobs:
         - name: Lint Consumers
@@ -343,6 +359,8 @@ blocks:
 
   - name: Lint and Test Logger
     dependencies: []
+    run:
+      when: "change_in('/logger', {pipeline_file: 'ignore'})"    
     task:
       jobs:
         - name: Lint Logger
@@ -372,6 +390,8 @@ blocks:
 
   - name: Lint and Test Certs
     dependencies: []
+    run:
+      when: "change_in('/certs', {pipeline_file: 'ignore'})"    
     task:
       jobs:
         - name: Lint Certs
@@ -401,6 +421,8 @@ blocks:
 
   - name: Lint and Test Bootstrap
     dependencies: []
+    run:
+      when: "change_in('/bootstrap', {pipeline_file: 'ignore'})"    
     task:
       jobs:
         - name: Lint Bootstrap
