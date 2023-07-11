@@ -69,7 +69,7 @@ blocks:
       - Setup
       - Setup Protobuf
     run:
-      when: "change_in('/mqtt/', {pipeline_file: ''ignore''})"     
+      when: "change_in('/mqtt', {pipeline_file: 'ignore'})"
     task:
       jobs:
         - name: Lint MQTT
