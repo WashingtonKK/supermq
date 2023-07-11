@@ -86,7 +86,7 @@ blocks:
             - cache restore codecov
             - ./codecov
       env_vars: []
-  - name: Build Mqtt
+  - name: Push MQTT
     dependencies:
       - Lint and Test Mqtt
     run:
@@ -95,61 +95,38 @@ blocks:
       jobs:
         - commands:
             - make mqtt
-          name: Build Mqtt
-  - name: Push Mqtt
-    dependencies:
-      - Build Mqtt
-    run:
-      when: 'change_in(''/mqtt/'', {pipeline_file: ''ignore''})'
-    task:
-      jobs:
-        - commands:
             - docker push mainflux/mqtt
-          name: Push Mqtt     
-  - name: Lint and Test Http
+          name: Push MQTT
+  - name: Lint and Test HTTP
     dependencies:
       - Setup Protobuf
     task:
       jobs:
-        - name: Lint Http
+        - name: Lint HTTP
           commands:
             - cd http
             - cache restore linter
             - ls -a
             - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
-        - name: Test Http
+        - name: Test HTTP
           commands:
             - cd http
             - go test ./... --race -v -coverprofile=coverage.out
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov            
-  - name: Build Http
+  - name: Push HTTP
     dependencies:
-      - Lint and Test Http
+      - Lint and Test HTTP
     run:
       when: 'change_in(''/http/'', {pipeline_file: ''ignore''})'
     task:
       jobs:
         - commands:
             - make http
-          name: Build Http
-  - name: Push Http
-    dependencies:
-      - Build Http
-    run:
-      when: 'change_in(''/http/'', {pipeline_file: ''ignore''})'
-    task:
-      jobs:
-        - commands:
             - docker push mainflux/http
-          name: Push Http
+          name: Push HTTP
 
-
-
-
-
-##########
   - name: Test all
     dependencies:
       - Setup Protobuf
@@ -161,83 +138,63 @@ blocks:
             - make test
           name: All test
 
-  - name: Lint and Test Ws
+  - name: Lint and Test WS
     dependencies: []
     task:
       jobs:
-        - name: Lint Wa
+        - name: Lint WS
           commands:
             - cd ws
             - cache restore linter
             - ls -a
             - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
-        - name: Test Ws
+        - name: Test WS
           commands:
             - cd ws
             - go test ./... --race -v -coverprofile=coverage.out
             - go tool cover -html=coverage.out -o coverage.html   
             - cache restore codecov
             - ./codecov               
-  - name: Build Ws
+  - name: Push WS
     dependencies:
-      - Lint and Test Ws
+      - Lint and Test WS
     run:
       when: "change_in('/ws/', {pipeline_file: 'ignore'})"
     task:
       jobs:
         - commands:
             - make ws
-          name: Build Ws
-  - name: Push Ws
-    dependencies:
-      - Build Ws
-    run:
-      when: "change_in('/ws/', {pipeline_file: 'ignore'})"
-    task:
-      jobs:
-        - commands:
-            - docker push mainflux/ws
-          name: Push Ws        
+            - docker push mainflux.ws
+          name: Push Ws
 
-
-  - name: Lint and Test Coap
+  - name: Lint and Test CoAp
     dependencies: []
     task:
       jobs:
-        - name: Lint Coap
+        - name: Lint CoAp
           commands:
             - cd coap
             - cache restore linter
             - ls -a
             - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
-        - name: Test Coap
+        - name: Test CoAp
           commands:
             - cd coap
             - go test ./... --race -v -coverprofile=coverage.out
             - go tool cover -html=coverage.out -o coverage.html     
             - cache restore codecov
             - ./codecov             
-  - name: Build Coap
+  - name: Push CoAp
     dependencies:
-      - Lint and Test Coap
+      - Lint and Test CoAp
     run:
       when: "change_in('/coap/', {pipeline_file: 'ignore'})"
     task:
       jobs:
         - commands:
             - make coap
-          name: Build Coap
-  - name: Push Coap
-    dependencies:
-      - Build Coap
-    run:
-      when: "change_in('/coap/', {pipeline_file: 'ignore'})"
-    task:
-      jobs:
-        - commands:
             - docker push mainflux/coap
-          name: Push Coap               
-
+          name: Push Coap
 
   - name: Lint and Test Twins
     dependencies: []
@@ -265,17 +222,8 @@ blocks:
       jobs:
         - commands:
             - make twins
-          name: Build Twins
-  - name: Push Twins
-    dependencies:
-      - Build Twins
-    run:
-      when: "change_in('/twins', {pipeline_file: 'ignore'})"
-    task:
-      jobs:
-        - commands:
             - docker push mainflux/twins
-          name: Push Twins     
+          name: Push Twins
 
   - name: Lint and Test Users
     dependencies: []
@@ -294,7 +242,7 @@ blocks:
             - cd users
             - go test ./... --race -v -coverprofile=coverage.out
             - go tool cover -html=coverage.out -o coverage.html     
-  - name: Build Users
+  - name: Push Users
     dependencies:
       - Lint and Test Users
     run:
@@ -303,19 +251,8 @@ blocks:
       jobs:
         - commands:
             - make users
-          name: Build Users
-  - name: Push Users
-    dependencies:
-      - Build Users
-    run:
-      when: "change_in('/users', {pipeline_file: 'ignore'})"
-    task:
-      jobs:
-        - commands:
             - docker push mainflux/users
-          name: Push Users            
-
-
+          name: Build Users
 
   - name: Lint and Test Things
     dependencies: []
@@ -334,7 +271,7 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html  
             - cache restore codecov
             - ./codecov                 
-  - name: Build Things
+  - name: Push Things
     dependencies:
       - Lint and Test Things
     run:
@@ -343,18 +280,8 @@ blocks:
       jobs:
         - commands:
             - make things
-          name: Build Things
-  - name: Push Things
-    dependencies:
-      - Build Things
-    run:
-      when: "change_in('/things', {pipeline_file: 'ignore'})"
-    task:
-      jobs:
-        - commands:
             - docker push mainflux/things
-          name: Push Things              
-
+          name: Push Things
 
   - name: Lint and Test Lora
     dependencies: []
@@ -373,26 +300,17 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov            
-  - name: Build Lora
+  - name: Push LoRa
     dependencies:
-      - Lint and Test Lora
+      - Lint and Test LoRa
     run:
       when: "change_in('/lora', {pipeline_file: 'ignore'})"
     task:
       jobs:
         - commands:
             - make lora
-          name: Build Lora
-  - name: Push Lora
-    dependencies:
-      - Build Lora
-    run:
-      when: "change_in('/lora', {pipeline_file: 'ignore'})"
-    task:
-      jobs:
-        - commands:
             - docker push mainflux/lora
-          name: Push Lora                
+          name: Push LoRa
 
   - name: Lint and Test Consumers
     dependencies: []
@@ -411,7 +329,7 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov            
-  - name: Build Consumers
+  - name: Push Consumers
     dependencies:
       - Lint and Test Consumers
     run:
@@ -420,19 +338,8 @@ blocks:
       jobs:
         - commands:
             - make consumers
-          name: Build Consumers
-  - name: Push Consumers
-    dependencies:
-      - Build Consumers
-    run:
-      when: "change_in('/consumers', {pipeline_file: 'ignore'})"
-    task:
-      jobs:
-        - commands:
             - docker push mainflux/consumers
-          name: Push Consumers              
-
-
+          name: Build Consumers
 
   - name: Lint and Test Logger
     dependencies: []
@@ -451,7 +358,7 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov            
-  - name: Build Logger
+  - name: Push Logger
     dependencies:
       - Lint and Test Logger
     run:
@@ -460,18 +367,8 @@ blocks:
       jobs:
         - commands:
             - make logger
-          name: Build Logger
-  - name: Push Logger
-    dependencies:
-      - Build Logger
-    run:
-      when: "change_in('/logger', {pipeline_file: 'ignore'})"
-    task:
-      jobs:
-        - commands:
             - docker push mainflux/logger
-          name: Push Logger          
-
+          name: Push Logger
 
   - name: Lint and Test Certs
     dependencies: []
@@ -490,7 +387,7 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov            
-  - name: Build Certs
+  - name: Push Certs
     dependencies:
       - Lint and Test Certs
     run:
@@ -499,23 +396,14 @@ blocks:
       jobs:
         - commands:
             - make certs
-          name: Build Certs
-  - name: Push Certs
-    dependencies:
-      - Build Certs
-    run:
-      when: "change_in('/certs', {pipeline_file: 'ignore'})"
-    task:
-      jobs:
-        - commands:
             - docker push mainflux/certs
-          name: Push Certs    
+          name: Push Certs
 
   - name: Lint and Test Bootstrap
     dependencies: []
     task:
       jobs:
-        - name: Lint Mqtt
+        - name: Lint Bootstrap
           commands:
             - cd bootstrap
             - cache restore linter
@@ -537,14 +425,6 @@ blocks:
       jobs:
         - commands:
             - make bootstrap
-          name: Build Bootstrap
-  - name: Push Bootstrap
-    dependencies:
-      - Build Bootstrap
-    run:
-      when: "change_in('/bootstrap', {pipeline_file: 'ignore'})"
-    task:
-      jobs:
-        - commands:
             - docker push mainflux/bootstrap
           name: Push Bootstrap
+
