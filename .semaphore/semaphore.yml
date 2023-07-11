@@ -14,15 +14,6 @@ global_job_config:
       - sem-version go 1.20
 
 
-apiVersion: v1beta
-kind: Secret
-metadata:
-  name: CODECOV_TOKEN
-data:
-  env_vars:
-    - name: CODECOV_TOKEN
-      value: "cae71f9f-9aab-4d92-964b-feffc4441f22"
-
 blocks:
   - name: Setup
     dependencies: []
