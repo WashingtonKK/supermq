@@ -13,16 +13,15 @@ global_job_config:
       - checkout
       - sem-version go 1.20
 
-# global_job_config:
-#   prologue:
-#     commands:
-#       - checkout
-#       - NPROC=$(nproc)
-#       - GO_VERSION=1.19.4
-#       - PROTOC_VERSION=23.3
-#       - PROTOC_GEN_VERSION=v1.31.0
-#       - PROTOC_GRPC_VERSION=v1.3.0     
-#       - GOLANGCI_LINT_VERSION=v1.52.1 
+
+apiVersion: v1beta
+kind: Secret
+metadata:
+  name: CODECOV_TOKEN
+data:
+  env_vars:
+    - name: CODECOV_TOKEN
+      value: "cae71f9f-9aab-4d92-964b-feffc4441f22"
 
 blocks:
   - name: Setup
@@ -34,6 +33,12 @@ blocks:
             - 'curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.53.3'
             - ./bin/golangci-lint version
             - cache store linter ./bin/golangci-lint
+        - name: Setup Codecov
+          commands:
+            - curl -Os https://uploader.codecov.io/latest/linux/codecov
+            - chmod +x codecov
+            - ./codecov  
+            - cache store codecov ./codecov          
   
   - name: Setup Protobuf
     dependencies: []
@@ -87,6 +92,8 @@ blocks:
             - cd mqtt
             - go test ./... --race -v -coverprofile=coverage.out
             - go tool cover -html=coverage.out -o coverage.html
+            - cache restore codecov
+            - ./codecov
       env_vars: []
   - name: Build Mqtt
     dependencies:
@@ -124,6 +131,8 @@ blocks:
             - cd http
             - go test ./... --race -v -coverprofile=coverage.out
             - go tool cover -html=coverage.out -o coverage.html
+            - cache restore codecov
+            - ./codecov            
   - name: Build Http
     dependencies:
       - Lint and Test Http
@@ -175,7 +184,9 @@ blocks:
           commands:
             - cd ws
             - go test ./... --race -v -coverprofile=coverage.out
-            - go tool cover -html=coverage.out -o coverage.html      
+            - go tool cover -html=coverage.out -o coverage.html   
+            - cache restore codecov
+            - ./codecov               
   - name: Build Ws
     dependencies:
       - Lint and Test Ws
@@ -212,7 +223,9 @@ blocks:
           commands:
             - cd coap
             - go test ./... --race -v -coverprofile=coverage.out
-            - go tool cover -html=coverage.out -o coverage.html      
+            - go tool cover -html=coverage.out -o coverage.html     
+            - cache restore codecov
+            - ./codecov             
   - name: Build Coap
     dependencies:
       - Lint and Test Coap
@@ -249,7 +262,9 @@ blocks:
           commands:
             - cd twins
             - go test ./... --race -v -coverprofile=coverage.out
-            - go tool cover -html=coverage.out -o coverage.html        
+            - go tool cover -html=coverage.out -o coverage.html    
+            - cache restore codecov
+            - ./codecov                
   - name: Build Twins
     dependencies:
       - Lint and Test Twins
@@ -281,6 +296,8 @@ blocks:
             - cache restore linter
             - ls -a
             - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
+            - cache restore codecov
+            - ./codecov            
         - name: Test Users
           commands:
             - cd users
@@ -323,7 +340,9 @@ blocks:
           commands:
             - cd things
             - go test ./... --race -v -coverprofile=coverage.out
-            - go tool cover -html=coverage.out -o coverage.html       
+            - go tool cover -html=coverage.out -o coverage.html  
+            - cache restore codecov
+            - ./codecov                 
   - name: Build Things
     dependencies:
       - Lint and Test Things
@@ -361,6 +380,8 @@ blocks:
             - cd lora
             - go test ./... --race -v -coverprofile=coverage.out
             - go tool cover -html=coverage.out -o coverage.html
+            - cache restore codecov
+            - ./codecov            
   - name: Build Lora
     dependencies:
       - Lint and Test Lora
@@ -397,6 +418,8 @@ blocks:
             - cd consumers
             - go test ./... --race -v -coverprofile=coverage.out
             - go tool cover -html=coverage.out -o coverage.html
+            - cache restore codecov
+            - ./codecov            
   - name: Build Consumers
     dependencies:
       - Lint and Test Consumers
@@ -435,6 +458,8 @@ blocks:
             - cd logger
             - go test ./... --race -v -coverprofile=coverage.out
             - go tool cover -html=coverage.out -o coverage.html
+            - cache restore codecov
+            - ./codecov            
   - name: Build Logger
     dependencies:
       - Lint and Test Logger
@@ -472,6 +497,8 @@ blocks:
             - cd certs
             - go test ./... --race -v -coverprofile=coverage.out
             - go tool cover -html=coverage.out -o coverage.html
+            - cache restore codecov
+            - ./codecov            
   - name: Build Certs
     dependencies:
       - Lint and Test Certs
@@ -508,6 +535,8 @@ blocks:
             - cd bootstrap
             - go test ./... --race -v -coverprofile=coverage.out
             - go tool cover -html=coverage.out -o coverage.html
+            - cache restore codecov
+            - ./codecov            
   - name: Build Bootstrap
     dependencies:
       - Lint and Test Bootstrap
