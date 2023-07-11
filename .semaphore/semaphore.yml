@@ -287,7 +287,7 @@ blocks:
     dependencies: []
     task:
       jobs:
-        - name: Lint Lora
+        - name: Lint LoRa
           commands:
             - cd lora
             - cache restore linter
