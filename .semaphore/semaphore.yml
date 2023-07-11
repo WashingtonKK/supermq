@@ -283,7 +283,7 @@ blocks:
             - docker push mainflux/things
           name: Push Things
 
-  - name: Lint and Test Lora
+  - name: Lint and Test LoRa
     dependencies: []
     task:
       jobs:
