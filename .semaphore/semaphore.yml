@@ -12,7 +12,6 @@ global_job_config:
     commands:
       - checkout
       - sem-version go 1.20
-
 blocks:
   - name: Setup
     dependencies: []
@@ -20,19 +19,20 @@ blocks:
       jobs:
         - name: Setup Codecov
           commands:
-            - curl -Os https://uploader.codecov.io/latest/linux/codecov
+            - 'curl -Os https://uploader.codecov.io/latest/linux/codecov'
             - chmod +x codecov
             - ./codecov
             - cache store codecov ./codecov
         - name: Setup Golangci-lint
           commands:
-            - "curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.53.3"
+            - 'curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.53.3'
             - cache store linter ./bin/golangci-lint
-
+      secrets:
+        - name: CODECOV_TOKEN
   - name: Check Generated Protocol Buffer Files
     dependencies: []
     run:
-      when: "change_in(['things/policies/auth.proto', 'users/policies/auth.proto', 'pkg/messaging/message.proto'])"
+      when: 'change_in([''things/policies/auth.proto'', ''users/policies/auth.proto'', ''pkg/messaging/message.proto''])'
     task:
       jobs:
         - name: Check Generated Protocol Buffer Files
@@ -92,10 +92,9 @@ blocks:
                 done
               }
             - check_files
-
   - name: Lint and Test Users
     run:
-      when: "change_in(['users', 'cmd/users'])"
+      when: 'change_in([''users'', ''cmd/users''])'
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -105,7 +104,7 @@ blocks:
           commands:
             - cd users
             - cache restore linter
-            - "./bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m"
+            - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
         - name: Test Users
           commands:
             - cd users
@@ -113,21 +112,21 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov
-
+      secrets:
+        - name: CODECOV_TOKEN
   - name: Build Users
     dependencies:
       - Lint and Test Users
     run:
-      when: "change_in(['users', 'cmd/users'])"
+      when: 'change_in([''users'', ''cmd/users''])'
     task:
       jobs:
         - name: Build Users
           commands:
             - make docker_users
-
   - name: Lint and Test Things
     run:
-      when: "change_in(['things', 'cmd/things'])"
+      when: 'change_in([''things'', ''cmd/things''])'
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -137,7 +136,7 @@ blocks:
           commands:
             - cd things
             - cache restore linter
-            - "./bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m"
+            - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
         - name: Test Things
           commands:
             - cd things
@@ -145,21 +144,21 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov
-
+      secrets:
+        - name: CODECOV_TOKEN
   - name: Build Things
     dependencies:
       - Lint and Test Things
     run:
-      when: "change_in(['things', 'cmd/things'])"
+      when: 'change_in([''things'', ''cmd/things''])'
     task:
       jobs:
         - name: Build Things
           commands:
             - make docker_things
-
   - name: Lint and Test CoAP
     run:
-      when: "change_in(['coap', 'cmd/coap'])"
+      when: 'change_in([''coap'', ''cmd/coap''])'
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -169,7 +168,7 @@ blocks:
           commands:
             - cd coap
             - cache restore linter
-            - "./bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m"
+            - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
         - name: Test CoAP
           commands:
             - cd coap
@@ -177,21 +176,19 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov
-
   - name: Build CoAP
     dependencies:
       - Lint and Test CoAP
     run:
-      when: "change_in(['coap', 'cmd/coap'])"
+      when: 'change_in([''coap'', ''cmd/coap''])'
     task:
       jobs:
         - name: Build CoAP
           commands:
             - make docker_coap
-
   - name: Lint and Test HTTP
     run:
-      when: "change_in(['http', 'cmd/http'])"
+      when: 'change_in([''http'', ''cmd/http''])'
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -201,7 +198,7 @@ blocks:
           commands:
             - cd http
             - cache restore linter
-            - "./bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m"
+            - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
         - name: Test HTTP
           commands:
             - cd http
@@ -209,21 +206,19 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov
-
   - name: Build HTTP
     dependencies:
       - Lint and Test HTTP
     run:
-      when: "change_in(['http', 'cmd/http'])"
+      when: 'change_in([''http'', ''cmd/http''])'
     task:
       jobs:
         - name: Build HTTP
           commands:
             - make docker_http
-
   - name: Lint and Test MQTT
     run:
-      when: "change_in(['mqtt', 'cmd/mqtt'])"
+      when: 'change_in([''mqtt'', ''cmd/mqtt''])'
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -233,7 +228,7 @@ blocks:
           commands:
             - cd mqtt
             - cache restore linter
-            - "./bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m"
+            - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
         - name: Test MQTT
           commands:
             - cd mqtt
@@ -241,21 +236,19 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov
-
   - name: Build MQTT
     dependencies:
       - Lint and Test MQTT
     run:
-      when: "change_in(['mqtt', 'cmd/mqtt'])"
+      when: 'change_in([''mqtt'', ''cmd/mqtt''])'
     task:
       jobs:
         - name: Build MQTT
           commands:
             - make docker_mqtt
-
   - name: Lint and Test WS
     run:
-      when: "change_in(['ws', 'cmd/ws'])"
+      when: 'change_in([''ws'', ''cmd/ws''])'
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -265,7 +258,7 @@ blocks:
           commands:
             - cd ws
             - cache restore linter
-            - "./bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m"
+            - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
         - name: Test WS
           commands:
             - cd ws
@@ -273,21 +266,19 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov
-
   - name: Build WS
     dependencies:
       - Lint and Test WS
     run:
-      when: "change_in(['ws', 'cmd/ws'])"
+      when: 'change_in([''ws'', ''cmd/ws''])'
     task:
       jobs:
         - name: Build WS
           commands:
             - make docker_ws
-
   - name: Lint and Test Bootstrap
     run:
-      when: "change_in(['bootstrap', 'cmd/bootstrap'])"
+      when: 'change_in([''bootstrap'', ''cmd/bootstrap''])'
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -297,7 +288,7 @@ blocks:
           commands:
             - cd bootstrap
             - cache restore linter
-            - "./bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m"
+            - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
         - name: Test Bootstrap
           commands:
             - cd bootstrap
@@ -305,21 +296,19 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov
-
   - name: Build Bootstrap
     dependencies:
       - Lint and Test Bootstrap
     run:
-      when: "change_in(['bootstrap', 'cmd/bootstrap'])"
+      when: 'change_in([''bootstrap'', ''cmd/bootstrap''])'
     task:
       jobs:
         - name: Build Bootstrap
           commands:
             - make docker_bootstrap
-
   - name: Lint and Test Certs
     run:
-      when: "change_in(['certs', 'cmd/certs'])"
+      when: 'change_in([''certs'', ''cmd/certs''])'
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -329,7 +318,7 @@ blocks:
           commands:
             - cd certs
             - cache restore linter
-            - "./bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m"
+            - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
         - name: Test Certs
           commands:
             - cd certs
@@ -337,31 +326,29 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov
-
   - name: Build Certs
     dependencies:
       - Lint and Test Certs
     run:
-      when: "change_in(['certs', 'cmd/certs'])"
+      when: 'change_in([''certs'', ''cmd/certs''])'
     task:
       jobs:
         - name: Build Certs
           commands:
             - make docker_certs
-
   - name: Lint and Test Provision
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
     run:
-      when: "change_in(['provision', 'cmd/provision'])"
+      when: 'change_in([''provision'', ''cmd/provision''])'
     task:
       jobs:
         - name: Lint Provision
           commands:
             - cd provision
             - cache restore linter
-            - "./bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m"
+            - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
         - name: Test Provision
           commands:
             - cd provision
@@ -369,21 +356,19 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov
-
   - name: Build Provision
     dependencies:
       - Lint and Test Provision
     run:
-      when: "change_in(['provision', 'cmd/provision'])"
+      when: 'change_in([''provision'', ''cmd/provision''])'
     task:
       jobs:
         - name: Build Provision
           commands:
             - make docker_provision
-
   - name: Lint and Test Twins
     run:
-      when: "change_in(['twins', 'cmd/twins'])"
+      when: 'change_in([''twins'', ''cmd/twins''])'
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -393,7 +378,7 @@ blocks:
           commands:
             - cd twins
             - cache restore linter
-            - "./bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m"
+            - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
         - name: Test Twins
           commands:
             - cd twins
@@ -401,21 +386,19 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov
-
   - name: Build Twins
     dependencies:
       - Lint and Test Twins
     run:
-      when: "change_in(['twins', 'cmd/twins'])"
+      when: 'change_in([''twins'', ''cmd/twins''])'
     task:
       jobs:
         - name: Build Twins
           commands:
             - make docker_twins
-
   - name: Lint and Test Readers
     run:
-      when: "change_in(['readers', 'cmd/cassandra-reader', 'cmd/influxdb-reader', 'cmd/mongodb-reader', 'cmd/postgres-reader', 'cmd/timescale-reader'])"
+      when: 'change_in([''readers'', ''cmd/cassandra-reader'', ''cmd/influxdb-reader'', ''cmd/mongodb-reader'', ''cmd/postgres-reader'', ''cmd/timescale-reader''])'
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -425,7 +408,7 @@ blocks:
           commands:
             - cd readers
             - cache restore linter
-            - "./bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m"
+            - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
         - name: Test Twins
           commands:
             - cd readers
@@ -433,12 +416,11 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov
-
   - name: Build Readers
     dependencies:
       - Lint and Test Readers
     run:
-      when: "change_in(['readers', 'cmd/cassandra-reader', 'cmd/influxdb-reader', 'cmd/mongodb-reader', 'cmd/postgres-reader', 'cmd/timescale-reader'])"
+      when: 'change_in([''readers'', ''cmd/cassandra-reader'', ''cmd/influxdb-reader'', ''cmd/mongodb-reader'', ''cmd/postgres-reader'', ''cmd/timescale-reader''])'
     task:
       jobs:
         - name: Build Readers
@@ -448,10 +430,9 @@ blocks:
             - make docker_mongodb-reader
             - make docker_postgres-reader
             - make docker_timescale-reader
-
   - name: Lint and Test Consumers
     run:
-      when: "change_in(['consumers', 'cmd/cassandra-writer', 'cmd/influxdb-writer', 'cmd/mongodb-writer', 'cmd/postgres-writer', 'cmd/timescale-writer', 'cmd/smpp-notifier', 'cmd/smtp-notifier'])"
+      when: 'change_in([''consumers'', ''cmd/cassandra-writer'', ''cmd/influxdb-writer'', ''cmd/mongodb-writer'', ''cmd/postgres-writer'', ''cmd/timescale-writer'', ''cmd/smpp-notifier'', ''cmd/smtp-notifier''])'
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -461,7 +442,7 @@ blocks:
           commands:
             - cd consumers
             - cache restore linter
-            - "./bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m"
+            - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
         - name: Test Consumers
           commands:
             - cd consumers
@@ -469,12 +450,11 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov
-
   - name: Build Consumers
     dependencies:
       - Lint and Test Consumers
     run:
-      when: "change_in(['consumers', 'cmd/cassandra-writer', 'cmd/influxdb-writer', 'cmd/mongodb-writer', 'cmd/postgres-writer', 'cmd/timescale-writer', 'cmd/smpp-notifier', 'cmd/smtp-notifier'])"
+      when: 'change_in([''consumers'', ''cmd/cassandra-writer'', ''cmd/influxdb-writer'', ''cmd/mongodb-writer'', ''cmd/postgres-writer'', ''cmd/timescale-writer'', ''cmd/smpp-notifier'', ''cmd/smtp-notifier''])'
     task:
       jobs:
         - name: Build Consumers
@@ -486,10 +466,9 @@ blocks:
             - make timescale-writer
             - make smpp-notifier
             - make smtp-notifier
-
   - name: Lint and Test CLI
     run:
-      when: "change_in(['cli', 'cmd/cli'])"
+      when: 'change_in([''cli'', ''cmd/cli''])'
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -499,7 +478,7 @@ blocks:
           commands:
             - cd cli
             - cache restore linter
-            - "./bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m"
+            - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
         - name: Test CLI
           commands:
             - cd cli
@@ -507,21 +486,19 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov
-
   - name: Build CLI
     dependencies:
       - Lint and Test CLI
     run:
-      when: "change_in(['cli', 'cmd/cli'])"
+      when: 'change_in([''cli'', ''cmd/cli''])'
     task:
       jobs:
         - name: Build CLI
           commands:
             - make docker_cli
-
   - name: Lint and Test LoRa
     run:
-      when: "change_in(['lora', 'cmd/lora'])"
+      when: 'change_in([''lora'', ''cmd/lora''])'
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -531,7 +508,7 @@ blocks:
           commands:
             - cd lora
             - cache restore linter
-            - "./bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m"
+            - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
         - name: Test LoRa
           commands:
             - cd lora
@@ -539,21 +516,19 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov
-
   - name: Build LoRa
     dependencies:
       - Lint and Test LoRa
     run:
-      when: "change_in(['lora', 'cmd/lora'])"
+      when: 'change_in([''lora'', ''cmd/lora''])'
     task:
       jobs:
         - name: Build LoRa
           commands:
             - make docker_lora
-
   - name: Lint and Test OPC-UA
     run:
-      when: "change_in(['/opcua', 'cmd/opcua'])"
+      when: 'change_in([''/opcua'', ''cmd/opcua''])'
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -563,7 +538,7 @@ blocks:
           commands:
             - cd opcua
             - cache restore linter
-            - "./bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m"
+            - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
         - name: Test OPC-UA
           commands:
             - cd opcua
@@ -571,21 +546,19 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov
-
   - name: Build OPC-UA
     dependencies:
       - Lint and Test OPC-UA
     run:
-      when: "change_in(['/opcua', 'cmd/opcua'])"
+      when: 'change_in([''/opcua'', ''cmd/opcua''])'
     task:
       jobs:
         - name: Build OPC-UA
           commands:
             - make docker_opcua
-
   - name: Lint and Test Internal
     run:
-      when: "change_in('/internal')"
+      when: change_in('/internal')
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -595,7 +568,7 @@ blocks:
           commands:
             - cd internal
             - cache restore linter
-            - "./bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m"
+            - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
         - name: Test Internal
           commands:
             - cd internal
@@ -603,10 +576,9 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov
-
   - name: Lint and Test Logger
     run:
-      when: "change_in('/logger')"
+      when: change_in('/logger')
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -616,7 +588,7 @@ blocks:
           commands:
             - cd logger
             - cache restore linter
-            - "./bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m"
+            - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
         - name: Test Logger
           commands:
             - cd logger
@@ -624,10 +596,9 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov
-
   - name: Lint and Test PKG
     run:
-      when: "change_in('/pkg')"
+      when: change_in('/pkg')
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -637,7 +608,7 @@ blocks:
           commands:
             - cd pkg
             - cache restore linter
-            - "./bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m"
+            - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
         - name: Test PKG
           commands:
             - cd pkg
@@ -645,10 +616,9 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov
-
   - name: Lint and Test Tools
     run:
-      when: "change_in('/tools')"
+      when: change_in('/tools')
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -658,7 +628,7 @@ blocks:
           commands:
             - cd tools
             - cache restore linter
-            - "./bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m"
+            - './bin/golangci-lint run --no-config --disable-all --enable gosimple,errcheck,govet,unused,goconst,godot --timeout 3m'
         - name: Test Tools
           commands:
             - cd tools
@@ -666,11 +636,10 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov
-
   - name: Users Auth Changes
     dependencies: []
     run:
-      when: "change_in('users/policies/auth.proto')"
+      when: change_in('users/policies/auth.proto')
     task:
       jobs:
         - name: Test Users
@@ -722,11 +691,12 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov
-
+      secrets:
+        - name: CODECOV_TOKEN
   - name: Things Auth Changes
     dependencies: []
     run:
-      when: "change_in('things/policies/auth.proto')"
+      when: change_in('things/policies/auth.proto')
     task:
       jobs:
         - name: Test Things
@@ -771,11 +741,12 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov
-
+      secrets:
+        - name: CODECOV_TOKEN
   - name: Messaging Changes
     dependencies: []
     run:
-      when: "change_in('pkg/messaging/message.proto')"
+      when: change_in('pkg/messaging/message.proto')
     task:
       jobs:
         - name: Test Messaging
@@ -805,21 +776,21 @@ blocks:
             - go test ./... --race -v -coverprofile=coverage.out
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
-            - ./codecov            
+            - ./codecov
         - name: Test OPC-UA
           commands:
             - cd opcua
             - go test ./... --race -v -coverprofile=coverage.out
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
-            - ./codecov            
+            - ./codecov
         - name: Test Twins
           commands:
             - cd twins
             - go test ./... --race -v -coverprofile=coverage.out
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
-            - ./codecov            
+            - ./codecov
         - name: Test Consumers
           commands:
             - cd consumers
@@ -827,18 +798,18 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov
-
+      secrets:
+        - name: CODECOV_TOKEN
   - name: Push Docker Images
     dependencies:
       - Setup
     run:
-      when: "branch = 'master'"
+      when: branch = 'master'
     task:
       jobs:
         - name: Push Docker Images
           commands:
             - make -j$NPROC latest
-
   - name: Compile Check For RabbitMQ
     dependencies:
       - Setup
@@ -847,4 +818,3 @@ blocks:
         - name: Compile For RabbitMQ
           commands:
             - MF_BROKER_TYPE=rabbitmq make mqtt
-            
