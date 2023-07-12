@@ -21,6 +21,7 @@ import (
 	"github.com/mainflux/mainflux/internal/server"
 	httpserver "github.com/mainflux/mainflux/internal/server/http"
 	mflog "github.com/mainflux/mainflux/logger"
+	"github.com/mainflux/mainflux/pkg/uuid"
 	"github.com/mainflux/mainflux/readers"
 	"github.com/mainflux/mainflux/readers/api"
 	"github.com/mainflux/mainflux/readers/timescale"
@@ -36,9 +37,9 @@ const (
 )
 
 type config struct {
-	LogLevel      string `env:"MF_TIMESCALE_READER_LOG_LEVEL"   envDefault:"info"`
-	JaegerURL     string `env:"MF_JAEGER_URL"                   envDefault:"http://jaeger:14268/api/traces"`
-	SendTelemetry bool   `env:"MF_SEND_TELEMETRY"               envDefault:"true"`
+	LogLevel      string `env:"MF_TIMESCALE_READER_LOG_LEVEL"    envDefault:"info"`
+	SendTelemetry bool   `env:"MF_SEND_TELEMETRY"                envDefault:"true"`
+	InstanceID    string `env:"MF_TIMESCALE_READER_INSTANCE_ID"  envDefault:""`
 }
 
 func main() {
@@ -55,6 +56,14 @@ func main() {
 		log.Fatalf("failed to init logger: %s", err)
 	}
 
+	instanceID := cfg.InstanceID
+	if instanceID == "" {
+		instanceID, err = uuid.New().ID()
+		if err != nil {
+			log.Fatalf("Failed to generate instanceID: %s", err)
+		}
+	}
+
 	dbConfig := pgClient.Config{Name: defDB}
 	if err := dbConfig.LoadEnv(envPrefix); err != nil {
 		logger.Fatal(err.Error())
@@ -67,14 +76,14 @@ func main() {
 
 	repo := newService(db, logger)
 
-	auth, authHandler, err := authClient.Setup(envPrefix, svcName, cfg.JaegerURL)
+	auth, authHandler, err := authClient.Setup(envPrefix, svcName)
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
 	defer authHandler.Close()
 	logger.Info("Successfully connected to auth grpc server " + authHandler.Secure())
 
-	tc, tcHandler, err := thingsClient.Setup(envPrefix, cfg.JaegerURL)
+	tc, tcHandler, err := thingsClient.Setup(envPrefix)
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
@@ -85,7 +94,7 @@ func main() {
 	if err := env.Parse(&httpServerConfig, env.Options{Prefix: envPrefixHttp, AltPrefix: envPrefix}); err != nil {
 		logger.Fatal(fmt.Sprintf("failed to load %s HTTP server configuration : %s", svcName, err))
 	}
-	hs := httpserver.New(ctx, cancel, svcName, httpServerConfig, api.MakeHandler(repo, tc, auth, svcName), logger)
+	hs := httpserver.New(ctx, cancel, svcName, httpServerConfig, api.MakeHandler(repo, tc, auth, svcName, instanceID), logger)
 
 	if cfg.SendTelemetry {
 		chc := chclient.New(svcName, mainflux.Version, logger, cancel)

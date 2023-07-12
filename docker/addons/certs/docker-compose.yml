@@ -66,11 +66,12 @@ services:
       MF_VAULT_CA_ROLE_NAME: ${MF_VAULT_CA_ROLE_NAME}
       MF_VAULT_PKI_PATH: ${MF_VAULT_PKI_PATH}
       MF_THINGS_URL: ${MF_THINGS_URL}
-      MF_JAEGER_URL: ${MF_JAEGER_URL}
       MF_AUTH_GRPC_URL: ${MF_USERS_GRPC_URL}
       MF_AUTH_GRPC_TIMEOUT: ${MF_USERS_GRPC_TIMEOUT}
       MF_CERTS_VAULT_HOST: ${MF_CERTS_VAULT_HOST}
+      MF_JAEGER_URL: ${MF_JAEGER_URL}
       MF_SEND_TELEMETRY: ${MF_SEND_TELEMETRY}
+      MF_CERTS_INSTANCE_ID: ${MF_CERTS_INSTANCE_ID}
     volumes:
       - ../../ssl/certs/ca.key:/etc/ssl/certs/ca.key
       - ../../ssl/certs/ca.crt:/etc/ssl/certs/ca.crt

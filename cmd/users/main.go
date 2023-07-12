@@ -39,7 +39,6 @@ import (
 	gtracing "github.com/mainflux/mainflux/users/groups/tracing"
 	"github.com/mainflux/mainflux/users/hasher"
 	"github.com/mainflux/mainflux/users/jwt"
-	jtracing "github.com/mainflux/mainflux/users/jwt/tracing"
 	"github.com/mainflux/mainflux/users/policies"
 	papi "github.com/mainflux/mainflux/users/policies/api"
 	grpcapi "github.com/mainflux/mainflux/users/policies/api/grpc"
@@ -74,6 +73,7 @@ type config struct {
 	ResetURL        string `env:"MF_TOKEN_RESET_ENDPOINT"         envDefault:"/reset-request"`
 	JaegerURL       string `env:"MF_JAEGER_URL"                   envDefault:"http://jaeger:14268/api/traces"`
 	SendTelemetry   bool   `env:"MF_SEND_TELEMETRY"               envDefault:"true"`
+	InstanceID      string `env:"MF_USERS_INSTANCE_ID"            envDefault:""`
 	PassRegex       *regexp.Regexp
 }
 
@@ -96,6 +96,14 @@ func main() {
 		logger.Fatal(fmt.Sprintf("failed to init logger: %s", err.Error()))
 	}
 
+	instanceID := cfg.InstanceID
+	if instanceID == "" {
+		instanceID, err = uuid.New().ID()
+		if err != nil {
+			log.Fatalf("Failed to generate instanceID: %s", err)
+		}
+	}
+
 	ec := email.Config{}
 	if err := env.Parse(&ec); err != nil {
 		logger.Fatal(fmt.Sprintf("failed to load email configuration : %s", err.Error()))
@@ -108,25 +116,25 @@ func main() {
 	}
 	defer db.Close()
 
-	tp, err := jaegerClient.NewProvider(svcName, cfg.JaegerURL)
+	tp, err := jaegerClient.NewProvider(svcName, cfg.JaegerURL, instanceID)
 	if err != nil {
 		logger.Fatal(fmt.Sprintf("failed to init Jaeger: %s", err))
 	}
 	defer func() {
-		if err := tp.Shutdown(context.Background()); err != nil {
+		if err := tp.Shutdown(ctx); err != nil {
 			logger.Error(fmt.Sprintf("error shutting down tracer provider: %v", err))
 		}
 	}()
 	tracer := tp.Tracer(svcName)
 
-	csvc, gsvc, psvc := newService(db, tracer, cfg, ec, logger)
+	csvc, gsvc, psvc := newService(ctx, db, tracer, cfg, ec, logger)
 
 	httpServerConfig := server.Config{Port: defSvcHttpPort}
 	if err := env.Parse(&httpServerConfig, env.Options{Prefix: envPrefixHttp, AltPrefix: envPrefix}); err != nil {
 		logger.Fatal(fmt.Sprintf("failed to load %s HTTP server configuration : %s", svcName, err.Error()))
 	}
 	mux := bone.New()
-	hsc := httpserver.New(ctx, cancel, svcName, httpServerConfig, capi.MakeHandler(csvc, mux, logger), logger)
+	hsc := httpserver.New(ctx, cancel, svcName, httpServerConfig, capi.MakeHandler(csvc, mux, logger, instanceID), logger)
 	hsg := httpserver.New(ctx, cancel, svcName, httpServerConfig, gapi.MakeHandler(gsvc, mux, logger), logger)
 	hsp := httpserver.New(ctx, cancel, svcName, httpServerConfig, httpapi.MakeHandler(psvc, mux, logger), logger)
 
@@ -162,7 +170,7 @@ func main() {
 	}
 }
 
-func newService(db *sqlx.DB, tracer trace.Tracer, c config, ec email.Config, logger mflog.Logger) (clients.Service, groups.Service, policies.Service) {
+func newService(ctx context.Context, db *sqlx.DB, tracer trace.Tracer, c config, ec email.Config, logger mflog.Logger) (clients.Service, groups.Service, policies.Service) {
 	database := postgres.NewDatabase(db, tracer)
 	cRepo := cpostgres.NewRepository(database)
 	gRepo := gpostgres.NewRepository(database)
@@ -180,7 +188,6 @@ func newService(db *sqlx.DB, tracer trace.Tracer, c config, ec email.Config, log
 		logger.Error(fmt.Sprintf("failed to parse refresh token duration: %s", err.Error()))
 	}
 	tokenizer := jwt.NewRepository([]byte(c.SecretKey), aDuration, rDuration)
-	tokenizer = jtracing.New(tokenizer, tracer)
 
 	emailer, err := emailer.New(c.ResetURL, &ec)
 	if err != nil {
@@ -205,13 +212,13 @@ func newService(db *sqlx.DB, tracer trace.Tracer, c config, ec email.Config, log
 	counter, latency = internal.MakeMetrics("policies", "api")
 	psvc = papi.MetricsMiddleware(psvc, counter, latency)
 
-	if err := createAdmin(c, cRepo, hsr, csvc); err != nil {
+	if err := createAdmin(ctx, c, cRepo, hsr, csvc); err != nil {
 		logger.Error(fmt.Sprintf("failed to create admin client: %s", err))
 	}
 	return csvc, gsvc, psvc
 }
 
-func createAdmin(c config, crepo mfclients.Repository, hsr clients.Hasher, svc clients.Service) error {
+func createAdmin(ctx context.Context, c config, crepo mfclients.Repository, hsr clients.Hasher, svc clients.Service) error {
 	id, err := uuid.New().ID()
 	if err != nil {
 		return err
@@ -237,16 +244,15 @@ func createAdmin(c config, crepo mfclients.Repository, hsr clients.Hasher, svc c
 		Status:    mfclients.EnabledStatus,
 	}
 
-	if _, err := crepo.RetrieveByIdentity(context.Background(), client.Credentials.Identity); err == nil {
+	if _, err := crepo.RetrieveByIdentity(ctx, client.Credentials.Identity); err == nil {
 		return nil
 	}
 
 	// Create an admin
-	if _, err = crepo.Save(context.Background(), client); err != nil {
+	if _, err = crepo.Save(ctx, client); err != nil {
 		return err
 	}
-	_, err = svc.IssueToken(context.Background(), c.AdminEmail, c.AdminPassword)
-	if err != nil {
+	if _, err = svc.IssueToken(ctx, c.AdminEmail, c.AdminPassword); err != nil {
 		return err
 	}
 

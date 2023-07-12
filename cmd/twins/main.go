@@ -45,6 +45,7 @@ const (
 	envPrefix      = "MF_TWINS_"
 	envPrefixHttp  = "MF_TWINS_HTTP_"
 	envPrefixCache = "MF_TWINS_CACHE_"
+	envPrefixES    = "MF_TWINS_ES_"
 	defSvcHttpPort = "9018"
 )
 
@@ -56,6 +57,7 @@ type config struct {
 	BrokerURL       string `env:"MF_BROKER_URL"               envDefault:"nats://localhost:4222"`
 	JaegerURL       string `env:"MF_JAEGER_URL"               envDefault:"http://jaeger:14268/api/traces"`
 	SendTelemetry   bool   `env:"MF_SEND_TELEMETRY"           envDefault:"true"`
+	InstanceID      string `env:"MF_TWINS_INSTANCE_ID"        envDefault:""`
 }
 
 func main() {
@@ -72,23 +74,38 @@ func main() {
 		log.Fatalf("failed to init logger: %s", err)
 	}
 
+	instanceID := cfg.InstanceID
+	if instanceID == "" {
+		instanceID, err = uuid.New().ID()
+		if err != nil {
+			log.Fatalf("Failed to generate instanceID: %s", err)
+		}
+	}
+
 	cacheClient, err := redisClient.Setup(envPrefixCache)
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
 	defer cacheClient.Close()
 
+	// Setup new redis event store client
+	esClient, err := redisClient.Setup(envPrefixES)
+	if err != nil {
+		logger.Fatal(err.Error())
+	}
+	defer esClient.Close()
+
 	db, err := mongoClient.Setup(envPrefix)
 	if err != nil {
 		logger.Fatal(fmt.Sprintf("failed to setup postgres database : %s", err))
 	}
 
-	tp, err := jaegerClient.NewProvider("twins_db", cfg.JaegerURL)
+	tp, err := jaegerClient.NewProvider(svcName, cfg.JaegerURL, instanceID)
 	if err != nil {
 		logger.Fatal(fmt.Sprintf("failed to init Jaeger: %s", err))
 	}
 	defer func() {
-		if err := tp.Shutdown(context.Background()); err != nil {
+		if err := tp.Shutdown(ctx); err != nil {
 			logger.Error(fmt.Sprintf("Error shutting down tracer provider: %v", err))
 		}
 	}()
@@ -99,7 +116,7 @@ func main() {
 	case true:
 		auth = localusers.NewAuthService(cfg.StandaloneID, cfg.StandaloneToken)
 	default:
-		authServiceClient, authHandler, err := authClient.Setup(envPrefix, svcName, cfg.JaegerURL)
+		authServiceClient, authHandler, err := authClient.Setup(envPrefix, svcName)
 		if err != nil {
 			logger.Fatal(err.Error())
 		}
@@ -115,13 +132,13 @@ func main() {
 	pubSub = pstracing.NewPubSub(tracer, pubSub)
 	defer pubSub.Close()
 
-	svc := newService(ctx, svcName, pubSub, cfg.ChannelID, auth, tracer, db, cacheClient, logger)
+	svc := newService(ctx, svcName, pubSub, cfg.ChannelID, auth, tracer, db, cacheClient, esClient, logger)
 
 	httpServerConfig := server.Config{Port: defSvcHttpPort}
 	if err := env.Parse(&httpServerConfig, env.Options{Prefix: envPrefixHttp, AltPrefix: envPrefix}); err != nil {
 		logger.Fatal(fmt.Sprintf("failed to load %s HTTP server configuration : %s", svcName, err))
 	}
-	hs := httpserver.New(ctx, cancel, svcName, httpServerConfig, twapi.MakeHandler(svc, logger), logger)
+	hs := httpserver.New(ctx, cancel, svcName, httpServerConfig, twapi.MakeHandler(svc, logger, instanceID), logger)
 
 	if cfg.SendTelemetry {
 		chc := chclient.New(svcName, mainflux.Version, logger, cancel)
@@ -141,7 +158,7 @@ func main() {
 	}
 }
 
-func newService(ctx context.Context, id string, ps messaging.PubSub, chanID string, users policies.AuthServiceClient, tracer trace.Tracer, db *mongo.Database, cacheClient *redis.Client, logger mflog.Logger) twins.Service {
+func newService(ctx context.Context, id string, ps messaging.PubSub, chanID string, users policies.AuthServiceClient, tracer trace.Tracer, db *mongo.Database, cacheClient *redis.Client, esClient *redis.Client, logger mflog.Logger) twins.Service {
 	twinRepo := twmongodb.NewTwinRepository(db)
 	twinRepo = tracing.TwinRepositoryMiddleware(tracer, twinRepo)
 
@@ -153,23 +170,26 @@ func newService(ctx context.Context, id string, ps messaging.PubSub, chanID stri
 	twinCache = tracing.TwinCacheMiddleware(tracer, twinCache)
 
 	svc := twins.New(ps, users, twinRepo, twinCache, stateRepo, idProvider, chanID, logger)
+
+	svc = rediscache.NewEventStoreMiddleware(svc, esClient)
+
 	svc = api.LoggingMiddleware(svc, logger)
 	counter, latency := internal.MakeMetrics(svcName, "api")
 	svc = api.MetricsMiddleware(svc, counter, latency)
-	err := ps.Subscribe(ctx, id, brokers.SubjectAllChannels, handle(logger, chanID, svc))
+	err := ps.Subscribe(ctx, id, brokers.SubjectAllChannels, handle(ctx, logger, chanID, svc))
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
 	return svc
 }
 
-func handle(logger mflog.Logger, chanID string, svc twins.Service) handlerFunc {
+func handle(ctx context.Context, logger mflog.Logger, chanID string, svc twins.Service) handlerFunc {
 	return func(msg *messaging.Message) error {
 		if msg.Channel == chanID {
 			return nil
 		}
 
-		if err := svc.SaveStates(msg); err != nil {
+		if err := svc.SaveStates(ctx, msg); err != nil {
 			logger.Error(fmt.Sprintf("State save failed: %s", err))
 			return err
 		}

@@ -16,6 +16,7 @@ import (
 	"github.com/mainflux/mainflux/logger"
 	"github.com/mainflux/mainflux/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit"
 )
 
 const (
@@ -27,7 +28,7 @@ const (
 )
 
 // MakeHandler returns a HTTP handler for API endpoints.
-func MakeHandler(svc certs.Service, logger logger.Logger) http.Handler {
+func MakeHandler(svc certs.Service, logger logger.Logger, instanceID string) http.Handler {
 	opts := []kithttp.ServerOption{
 		kithttp.ServerErrorEncoder(apiutil.LoggingErrorEncoder(logger, encodeError)),
 	}
@@ -35,35 +36,35 @@ func MakeHandler(svc certs.Service, logger logger.Logger) http.Handler {
 	r := bone.New()
 
 	r.Post("/certs", kithttp.NewServer(
-		issueCert(svc),
+		otelkit.EndpointMiddleware(otelkit.WithOperation("issue"))(issueCert(svc)),
 		decodeCerts,
 		encodeResponse,
 		opts...,
 	))
 
 	r.Get("/certs/:certID", kithttp.NewServer(
-		viewCert(svc),
+		otelkit.EndpointMiddleware(otelkit.WithOperation("view"))(viewCert(svc)),
 		decodeViewCert,
 		encodeResponse,
 		opts...,
 	))
 
 	r.Delete("/certs/:certID", kithttp.NewServer(
-		revokeCert(svc),
+		otelkit.EndpointMiddleware(otelkit.WithOperation("revoke"))(revokeCert(svc)),
 		decodeRevokeCerts,
 		encodeResponse,
 		opts...,
 	))
 
 	r.Get("/serials/:thingID", kithttp.NewServer(
-		listSerials(svc),
+		otelkit.EndpointMiddleware(otelkit.WithOperation("list_serials"))(listSerials(svc)),
 		decodeListCerts,
 		encodeResponse,
 		opts...,
 	))
 
 	r.Handle("/metrics", promhttp.Handler())
-	r.GetFunc("/health", mainflux.Health("certs"))
+	r.GetFunc("/health", mainflux.Health("certs", instanceID))
 
 	return r
 }

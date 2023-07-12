@@ -12,19 +12,24 @@ import (
 
 	chclient "github.com/mainflux/callhome/pkg/client"
 	"github.com/mainflux/mainflux"
+	"go.opentelemetry.io/otel/trace"
 
 	bootstrapPg "github.com/mainflux/mainflux/bootstrap/postgres"
 	rediscons "github.com/mainflux/mainflux/bootstrap/redis/consumer"
 	redisprod "github.com/mainflux/mainflux/bootstrap/redis/producer"
+	"github.com/mainflux/mainflux/bootstrap/tracing"
 	"github.com/mainflux/mainflux/internal"
 	authClient "github.com/mainflux/mainflux/internal/clients/grpc/auth"
+	jaegerClient "github.com/mainflux/mainflux/internal/clients/jaeger"
 	pgClient "github.com/mainflux/mainflux/internal/clients/postgres"
 	redisClient "github.com/mainflux/mainflux/internal/clients/redis"
 	"github.com/mainflux/mainflux/internal/env"
+	"github.com/mainflux/mainflux/internal/postgres"
 	"github.com/mainflux/mainflux/internal/server"
 	httpserver "github.com/mainflux/mainflux/internal/server/http"
 	mflog "github.com/mainflux/mainflux/logger"
 	mfsdk "github.com/mainflux/mainflux/pkg/sdk/go"
+	"github.com/mainflux/mainflux/pkg/uuid"
 	"github.com/mainflux/mainflux/users/policies"
 	"golang.org/x/sync/errgroup"
 
@@ -50,6 +55,7 @@ type config struct {
 	ThingsURL      string `env:"MF_THINGS_URL"                 envDefault:"http://localhost:9000"`
 	JaegerURL      string `env:"MF_JAEGER_URL"                 envDefault:"http://jaeger:14268/api/traces"`
 	SendTelemetry  bool   `env:"MF_SEND_TELEMETRY"             envDefault:"true"`
+	InstanceID     string `env:"MF_BOOTSTRAP_INSTANCE_ID"      envDefault:""`
 }
 
 func main() {
@@ -64,6 +70,14 @@ func main() {
 	logger, err := mflog.New(os.Stdout, cfg.LogLevel)
 	if err != nil {
 		log.Fatalf("failed to init logger: %s", err)
+	}
+
+	instanceID := cfg.InstanceID
+	if instanceID == "" {
+		instanceID, err = uuid.New().ID()
+		if err != nil {
+			log.Fatalf("Failed to generate instanceID: %s", err)
+		}
 	}
 
 	// Create new postgres client
@@ -83,22 +97,34 @@ func main() {
 	defer esClient.Close()
 
 	// Create new auth grpc client api
-	auth, authHandler, err := authClient.Setup(envPrefix, svcName, cfg.JaegerURL)
+	auth, authHandler, err := authClient.Setup(envPrefix, svcName)
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
 	defer authHandler.Close()
 	logger.Info("Successfully connected to auth grpc server " + authHandler.Secure())
 
+	tp, err := jaegerClient.NewProvider(svcName, cfg.JaegerURL, instanceID)
+	if err != nil {
+		logger.Fatal(fmt.Sprintf("failed to init Jaeger: %s", err))
+	}
+	defer func() {
+		if err := tp.Shutdown(context.Background()); err != nil {
+			logger.Error(fmt.Sprintf("error shutting down tracer provider: %v", err))
+		}
+	}()
+	tracer := tp.Tracer(svcName)
+
 	// Create new service
-	svc := newService(auth, db, logger, esClient, cfg)
+	svc := newService(auth, db, tracer, logger, esClient, cfg)
 
 	// Create an new HTTP server
 	httpServerConfig := server.Config{Port: defSvcHttpPort}
 	if err := env.Parse(&httpServerConfig, env.Options{Prefix: envPrefixHttp, AltPrefix: envPrefix}); err != nil {
 		logger.Fatal(fmt.Sprintf("failed to load %s HTTP server configuration : %s", svcName, err))
 	}
-	hs := httpserver.New(ctx, cancel, svcName, httpServerConfig, api.MakeHandler(svc, bootstrap.NewConfigReader([]byte(cfg.EncKey)), logger), logger)
+
+	hs := httpserver.New(ctx, cancel, svcName, httpServerConfig, api.MakeHandler(svc, bootstrap.NewConfigReader([]byte(cfg.EncKey)), logger, instanceID), logger)
 
 	if cfg.SendTelemetry {
 		chc := chclient.New(svcName, mainflux.Version, logger, cancel)
@@ -120,15 +146,16 @@ func main() {
 	}
 	defer thingsESClient.Close()
 
-	go subscribeToThingsES(svc, thingsESClient, cfg.ESConsumerName, logger)
+	go subscribeToThingsES(ctx, svc, thingsESClient, cfg.ESConsumerName, logger)
 
 	if err := g.Wait(); err != nil {
 		logger.Error(fmt.Sprintf("Bootstrap service terminated: %s", err))
 	}
 }
 
-func newService(auth policies.AuthServiceClient, db *sqlx.DB, logger mflog.Logger, esClient *redis.Client, cfg config) bootstrap.Service {
-	repoConfig := bootstrapPg.NewConfigRepository(db, logger)
+func newService(auth policies.AuthServiceClient, db *sqlx.DB, tracer trace.Tracer, logger mflog.Logger, esClient *redis.Client, cfg config) bootstrap.Service {
+	database := postgres.NewDatabase(db, tracer)
+	repoConfig := bootstrapPg.NewConfigRepository(database, logger)
 
 	config := mfsdk.Config{
 		ThingsURL: cfg.ThingsURL,
@@ -141,14 +168,15 @@ func newService(auth policies.AuthServiceClient, db *sqlx.DB, logger mflog.Logge
 	svc = api.LoggingMiddleware(svc, logger)
 	counter, latency := internal.MakeMetrics(svcName, "api")
 	svc = api.MetricsMiddleware(svc, counter, latency)
+	svc = tracing.New(svc, tracer)
 
 	return svc
 }
 
-func subscribeToThingsES(svc bootstrap.Service, client *redis.Client, consumer string, logger mflog.Logger) {
+func subscribeToThingsES(ctx context.Context, svc bootstrap.Service, client *redis.Client, consumer string, logger mflog.Logger) {
 	eventStore := rediscons.NewEventStore(svc, client, consumer, logger)
 	logger.Info("Subscribed to Redis Event Store")
-	if err := eventStore.Subscribe(context.Background(), "mainflux.things"); err != nil {
+	if err := eventStore.Subscribe(ctx, "mainflux.things"); err != nil {
 		logger.Warn(fmt.Sprintf("Bootstrap service failed to subscribe to event sourcing: %s", err))
 	}
 }
