@@ -55,10 +55,10 @@ func main() {
 		log.Fatalf("failed to load %s configuration : %s", svcName, err)
 	}
 
-	logger, err := mflog.New(os.Stdout, cfg.LogLevel)
-	if err != nil {
-		log.Fatalf("failed to init logger: %s", err)
-	}
+	// logger, err := mflog.New(os.Stdout, cfg.LogLevel)
+	// if err != nil {
+	// 	log.Fatalf("failed to init logger: %s", err)
+	// }
 
 	instanceID := cfg.InstanceID
 	if instanceID == "" {
