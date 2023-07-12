@@ -2,9 +2,7 @@ package mocks
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/mainflux/mainflux/pkg/errors"
 	"github.com/mainflux/mainflux/things/policies"
 	"google.golang.org/grpc"
 )
@@ -12,7 +10,7 @@ import (
 const separator = ":"
 
 type mockClient struct {
-	ids   map[streing]string  // (password,id) for Identify
+	ids   map[string]string   // (password,id) for Identify
 	elems map[string][]string // (password:channel, []actions) for Authorize
 }
 
@@ -34,14 +32,14 @@ func (cli mockClient) Authorize(ctx context.Context, ar *policies.AuthorizeReq, 
 	return &policies.AuthorizeRes{Authorized: false}, nil
 }
 
-func (cli mockClient) Identify(ctx context.Context, in *policies.Key, opts ...grpc.CallOption) (*policies.ClientID, error) {
-	if id, ok := cli.ids[in.GetValue()]; ok {
-		return &policies.ClientID{Value: id}, nil
-	}
-	return &policies.ClientID{}, errors.ErrAuthentication
-}
+// func (cli mockClient) Identify(ctx context.Context, in *policies.Key, opts ...grpc.CallOption) (*policies.ClientID, error) {
+// 	if id, ok := cli.ids[in.GetValue()]; ok {
+// 		return &policies.ClientID{Value: id}, nil
+// 	}
+// 	return &policies.ClientID{}, errors.ErrAuthentication
+// }
 
-// Key generates key for internal auth map.
-func Key(ar *policies.AuthorizeReq) string {
-	return fmt.Sprintf("%s%s%s", ar.Sub, separator, ar.Obj)
-}
+// // Key generates key for internal auth map.
+// func Key(ar *policies.AuthorizeReq) string {
+// 	return fmt.Sprintf("%s%s%s", ar.Sub, separator, ar.Obj)
+// }
