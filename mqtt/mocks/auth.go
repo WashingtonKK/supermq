@@ -12,7 +12,7 @@ import (
 const separator = ":"
 
 type mockClient struct {
-	ids   map[string]string   // (password,id) for Identify
+	ids   map[streing]string  // (password,id) for Identify
 	elems map[string][]string // (password:channel, []actions) for Authorize
 }
 
