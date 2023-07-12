@@ -32,7 +32,7 @@ blocks:
   - name: Check Generated Protocol Buffer Files
     dependencies: []
     run:
-      when: 'change_in([''things/policies/auth.proto'', ''users/policies/auth.proto'', ''pkg/messaging/message.proto''])'
+      when: "change_in(['things/policies/auth.proto', 'users/policies/auth.proto', 'pkg/messaging/message.proto'])"
     task:
       jobs:
         - name: Check Generated Protocol Buffer Files
@@ -94,7 +94,7 @@ blocks:
             - check_files
   - name: Lint and Test Users
     run:
-      when: 'change_in([''users'', ''cmd/users''])'
+      when: "change_in(['users', 'cmd/users'])"
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -118,7 +118,7 @@ blocks:
     dependencies:
       - Lint and Test Users
     run:
-      when: 'change_in([''users'', ''cmd/users''])'
+      when: "change_in(['users', 'cmd/users'])"
     task:
       jobs:
         - name: Build Users
@@ -126,7 +126,7 @@ blocks:
             - make docker_users
   - name: Lint and Test Things
     run:
-      when: 'change_in([''things'', ''cmd/things''])'
+      when: "change_in(['things', 'cmd/things'])"
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -150,7 +150,7 @@ blocks:
     dependencies:
       - Lint and Test Things
     run:
-      when: 'change_in([''things'', ''cmd/things''])'
+      when: "change_in(['things', 'cmd/things'])"
     task:
       jobs:
         - name: Build Things
@@ -158,7 +158,7 @@ blocks:
             - make docker_things
   - name: Lint and Test CoAP
     run:
-      when: 'change_in([''coap'', ''cmd/coap''])'
+      when: "change_in(['coap', 'cmd/coap'])"
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -182,7 +182,7 @@ blocks:
     dependencies:
       - Lint and Test CoAP
     run:
-      when: 'change_in([''coap'', ''cmd/coap''])'
+      when: "change_in(['coap', 'cmd/coap'])"
     task:
       jobs:
         - name: Build CoAP
@@ -190,7 +190,7 @@ blocks:
             - make docker_coap
   - name: Lint and Test HTTP
     run:
-      when: 'change_in([''http'', ''cmd/http''])'
+      when: "change_in(['http', 'cmd/http'])"
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -214,7 +214,7 @@ blocks:
     dependencies:
       - Lint and Test HTTP
     run:
-      when: 'change_in([''http'', ''cmd/http''])'
+      when: "change_in(['http', 'cmd/http'])"
     task:
       jobs:
         - name: Build HTTP
@@ -222,7 +222,7 @@ blocks:
             - make docker_http
   - name: Lint and Test MQTT
     run:
-      when: 'change_in([''mqtt'', ''cmd/mqtt''])'
+      when: "change_in(['mqtt', 'cmd/mqtt'])"
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -246,7 +246,7 @@ blocks:
     dependencies:
       - Lint and Test MQTT
     run:
-      when: 'change_in([''mqtt'', ''cmd/mqtt''])'
+      when: "change_in(['mqtt', 'cmd/mqtt'])"
     task:
       jobs:
         - name: Build MQTT
@@ -254,7 +254,7 @@ blocks:
             - make docker_mqtt
   - name: Lint and Test WS
     run:
-      when: 'change_in([''ws'', ''cmd/ws''])'
+      when: "change_in(['ws', 'cmd/ws'])"
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -278,7 +278,7 @@ blocks:
     dependencies:
       - Lint and Test WS
     run:
-      when: 'change_in([''ws'', ''cmd/ws''])'
+      when: "change_in(['ws', 'cmd/ws'])"
     task:
       jobs:
         - name: Build WS
@@ -286,7 +286,7 @@ blocks:
             - make docker_ws
   - name: Lint and Test Bootstrap
     run:
-      when: 'change_in([''bootstrap'', ''cmd/bootstrap''])'
+      when: "change_in(['bootstrap', 'cmd/bootstrap'])"
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -310,7 +310,7 @@ blocks:
     dependencies:
       - Lint and Test Bootstrap
     run:
-      when: 'change_in([''bootstrap'', ''cmd/bootstrap''])'
+      when: "change_in(['bootstrap', 'cmd/bootstrap'])"
     task:
       jobs:
         - name: Build Bootstrap
@@ -318,7 +318,7 @@ blocks:
             - make docker_bootstrap
   - name: Lint and Test Certs
     run:
-      when: 'change_in([''certs'', ''cmd/certs''])'
+      when: "change_in(['certs', 'cmd/certs'])"
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -342,7 +342,7 @@ blocks:
     dependencies:
       - Lint and Test Certs
     run:
-      when: 'change_in([''certs'', ''cmd/certs''])'
+      when: "change_in(['certs', 'cmd/certs'])"
     task:
       jobs:
         - name: Build Certs
@@ -353,7 +353,7 @@ blocks:
       - Setup
       - Check Generated Protocol Buffer Files
     run:
-      when: 'change_in([''provision'', ''cmd/provision''])'
+      when: "change_in(['provision', 'cmd/provision'])"
     task:
       jobs:
         - name: Lint Provision
@@ -374,7 +374,7 @@ blocks:
     dependencies:
       - Lint and Test Provision
     run:
-      when: 'change_in([''provision'', ''cmd/provision''])'
+      when: "change_in(['provision', 'cmd/provision'])"
     task:
       jobs:
         - name: Build Provision
@@ -382,7 +382,7 @@ blocks:
             - make docker_provision
   - name: Lint and Test Twins
     run:
-      when: 'change_in([''twins'', ''cmd/twins''])'
+      when: "change_in(['twins', 'cmd/twins'])"
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -406,7 +406,7 @@ blocks:
     dependencies:
       - Lint and Test Twins
     run:
-      when: 'change_in([''twins'', ''cmd/twins''])'
+      when: "change_in(['twins', 'cmd/twins'])"
     task:
       jobs:
         - name: Build Twins
@@ -414,7 +414,7 @@ blocks:
             - make docker_twins
   - name: Lint and Test Readers
     run:
-      when: 'change_in([''readers'', ''cmd/cassandra-reader'', ''cmd/influxdb-reader'', ''cmd/mongodb-reader'', ''cmd/postgres-reader'', ''cmd/timescale-reader''])'
+      when: "change_in(['readers', 'cmd/cassandra-reader', 'cmd/influxdb-reader', 'cmd/mongodb-reader', 'cmd/postgres-reader', 'cmd/timescale-reader'])"
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -438,7 +438,7 @@ blocks:
     dependencies:
       - Lint and Test Readers
     run:
-      when: 'change_in([''readers'', ''cmd/cassandra-reader'', ''cmd/influxdb-reader'', ''cmd/mongodb-reader'', ''cmd/postgres-reader'', ''cmd/timescale-reader''])'
+      when: "change_in(['readers', 'cmd/cassandra-reader', 'cmd/influxdb-reader', 'cmd/mongodb-reader', 'cmd/postgres-reader', 'cmd/timescale-reader'])"
     task:
       jobs:
         - name: Build Readers
@@ -450,7 +450,7 @@ blocks:
             - make docker_timescale-reader
   - name: Lint and Test Consumers
     run:
-      when: 'change_in([''consumers'', ''cmd/cassandra-writer'', ''cmd/influxdb-writer'', ''cmd/mongodb-writer'', ''cmd/postgres-writer'', ''cmd/timescale-writer'', ''cmd/smpp-notifier'', ''cmd/smtp-notifier''])'
+      when: "change_in(['consumers', 'cmd/cassandra-writer', 'cmd/influxdb-writer', 'cmd/mongodb-writer', 'cmd/postgres-writer', 'cmd/timescale-writer', 'cmd/smpp-notifier', 'cmd/smtp-notifier'])"
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -474,7 +474,7 @@ blocks:
     dependencies:
       - Lint and Test Consumers
     run:
-      when: 'change_in([''consumers'', ''cmd/cassandra-writer'', ''cmd/influxdb-writer'', ''cmd/mongodb-writer'', ''cmd/postgres-writer'', ''cmd/timescale-writer'', ''cmd/smpp-notifier'', ''cmd/smtp-notifier''])'
+      when: "change_in(['consumers', 'cmd/cassandra-writer', 'cmd/influxdb-writer', 'cmd/mongodb-writer', 'cmd/postgres-writer', 'cmd/timescale-writer', 'cmd/smpp-notifier', 'cmd/smtp-notifier'])"
     task:
       jobs:
         - name: Build Consumers
@@ -488,7 +488,7 @@ blocks:
             - make smtp-notifier
   - name: Lint and Test CLI
     run:
-      when: 'change_in([''cli'', ''cmd/cli''])'
+      when: "change_in(['cli', 'cmd/cli'])"
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -512,7 +512,7 @@ blocks:
     dependencies:
       - Lint and Test CLI
     run:
-      when: 'change_in([''cli'', ''cmd/cli''])'
+      when: "change_in(['cli', 'cmd/cli'])"
     task:
       jobs:
         - name: Build CLI
@@ -520,7 +520,7 @@ blocks:
             - make docker_cli
   - name: Lint and Test LoRa
     run:
-      when: 'change_in([''lora'', ''cmd/lora''])'
+      when: "change_in(['lora', 'cmd/lora'])"
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -544,7 +544,7 @@ blocks:
     dependencies:
       - Lint and Test LoRa
     run:
-      when: 'change_in([''lora'', ''cmd/lora''])'
+      when: "change_in(['lora', 'cmd/lora'])"
     task:
       jobs:
         - name: Build LoRa
@@ -552,7 +552,7 @@ blocks:
             - make docker_lora
   - name: Lint and Test OPC-UA
     run:
-      when: 'change_in([''/opcua'', ''cmd/opcua''])'
+      when: "change_in(['/opcua', 'cmd/opcua'])"
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -576,7 +576,7 @@ blocks:
     dependencies:
       - Lint and Test OPC-UA
     run:
-      when: 'change_in([''/opcua'', ''cmd/opcua''])'
+      when: "change_in(['/opcua', 'cmd/opcua'])"
     task:
       jobs:
         - name: Build OPC-UA
@@ -584,7 +584,7 @@ blocks:
             - make docker_opcua
   - name: Lint and Test Internal
     run:
-      when: change_in('/internal')
+      when: "change_in('/internal')"
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -604,7 +604,7 @@ blocks:
             - ./codecov
   - name: Lint and Test Logger
     run:
-      when: change_in('/logger')
+      when: "change_in('/logger')"
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -624,7 +624,7 @@ blocks:
             - ./codecov
   - name: Lint and Test PKG
     run:
-      when: change_in('/pkg')
+      when: "change_in('/pkg')"
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -644,7 +644,7 @@ blocks:
             - ./codecov
   - name: Lint and Test Tools
     run:
-      when: change_in('/tools')
+      when: "change_in('/tools')"
     dependencies:
       - Setup
       - Check Generated Protocol Buffer Files
@@ -665,7 +665,7 @@ blocks:
   - name: Users Auth Changes
     dependencies: []
     run:
-      when: change_in('users/policies/auth.proto')
+      when: "change_in('users/policies/auth.proto')"
     task:
       jobs:
         - name: Test Users
@@ -722,7 +722,7 @@ blocks:
   - name: Things Auth Changes
     dependencies: []
     run:
-      when: change_in('things/policies/auth.proto')
+      when: "change_in('things/policies/auth.proto')"
     task:
       jobs:
         - name: Test Things
@@ -772,7 +772,7 @@ blocks:
   - name: Messaging Changes
     dependencies: []
     run:
-      when: change_in('pkg/messaging/message.proto')
+      when: "change_in('pkg/messaging/message.proto')"
     task:
       jobs:
         - name: Test Messaging
