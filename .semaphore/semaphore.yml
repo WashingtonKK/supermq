@@ -123,7 +123,7 @@ blocks:
       jobs:
         - name: Build Users
           commands:
-            - make users
+            - make docker_users
 
   - name: Lint and Test Things
     run:
@@ -155,7 +155,7 @@ blocks:
       jobs:
         - name: Build Things
           commands:
-            - make things
+            - make docker_things
 
   - name: Lint and Test CoAP
     run:
@@ -187,7 +187,7 @@ blocks:
       jobs:
         - name: Build CoAP
           commands:
-            - make coap
+            - make docker_coap
 
   - name: Lint and Test HTTP
     run:
@@ -219,7 +219,7 @@ blocks:
       jobs:
         - name: Build HTTP
           commands:
-            - make http
+            - make docker_http
 
   - name: Lint and Test MQTT
     run:
@@ -251,7 +251,7 @@ blocks:
       jobs:
         - name: Build MQTT
           commands:
-            - make mqtt
+            - make docker_mqtt
 
   - name: Lint and Test WS
     run:
@@ -283,7 +283,7 @@ blocks:
       jobs:
         - name: Build WS
           commands:
-            - make ws
+            - make docker_ws
 
   - name: Lint and Test Bootstrap
     run:
@@ -315,7 +315,7 @@ blocks:
       jobs:
         - name: Build Bootstrap
           commands:
-            - make bootstrap
+            - make docker_bootstrap
 
   - name: Lint and Test Certs
     run:
@@ -347,7 +347,7 @@ blocks:
       jobs:
         - name: Build Certs
           commands:
-            - make certs
+            - make docker_certs
 
   - name: Lint and Test Provision
     dependencies:
@@ -379,7 +379,7 @@ blocks:
       jobs:
         - name: Build Provision
           commands:
-            - make provision
+            - make docker_provision
 
   - name: Lint and Test Twins
     run:
@@ -411,7 +411,7 @@ blocks:
       jobs:
         - name: Build Twins
           commands:
-            - make twins
+            - make docker_twins
 
   - name: Lint and Test Readers
     run:
@@ -443,11 +443,11 @@ blocks:
       jobs:
         - name: Build Readers
           commands:
-            - make cassandra-reader
-            - make influxdb-reader
-            - make mongodb-reader
-            - make postgres-reader
-            - make timescale-reader
+            - make docker_cassandra-reader
+            - make docker_influxdb-reader
+            - make docker_mongodb-reader
+            - make docker_postgres-reader
+            - make docker_timescale-reader
 
   - name: Lint and Test Consumers
     run:
@@ -517,7 +517,7 @@ blocks:
       jobs:
         - name: Build CLI
           commands:
-            - make cli
+            - make docker_cli
 
   - name: Lint and Test LoRa
     run:
@@ -549,7 +549,7 @@ blocks:
       jobs:
         - name: Build LoRa
           commands:
-            - make lora
+            - make docker_lora
 
   - name: Lint and Test OPC-UA
     run:
@@ -581,7 +581,7 @@ blocks:
       jobs:
         - name: Build OPC-UA
           commands:
-            - make opcua
+            - make docker_opcua
 
   - name: Lint and Test Internal
     run:
