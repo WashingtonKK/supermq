@@ -36,14 +36,14 @@ type Service interface {
 	Unsubscribe(ctx context.Context, key, chanID, subptopic, token string) error
 }
 
-var _ Service = (*adapterService)(nil)
+// var _ Service = (*adapterService)(nil)
 
-// Observers is a map of maps,.
-type adapterService struct {
-	auth    policies.ThingsServiceClient
-	pubsub  messaging.PubSub
-	obsLock sync.Mutex
-}
+// // Observers is a map of maps,.
+// type adapterService struct {
+// 	auth    policies.ThingsServiceClient
+// 	pubsub  messaging.PubSub
+// 	obsLock sync.Mutex
+// }
 
 // New instantiates the CoAP adapter implementation.
 func New(auth policies.ThingsServiceClient, pubsub messaging.PubSub) Service {
