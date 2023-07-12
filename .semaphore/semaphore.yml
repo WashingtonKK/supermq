@@ -176,6 +176,8 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov
+      secrets:
+        - name: CODECOV_TOKEN
   - name: Build CoAP
     dependencies:
       - Lint and Test CoAP
@@ -206,6 +208,8 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov
+      secrets:
+        - name: CODECOV_TOKEN
   - name: Build HTTP
     dependencies:
       - Lint and Test HTTP
@@ -236,6 +240,8 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov
+      secrets:
+        - name: CODECOV_TOKEN
   - name: Build MQTT
     dependencies:
       - Lint and Test MQTT
@@ -266,6 +272,8 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov
+      secrets:
+        - name: CODECOV_TOKEN
   - name: Build WS
     dependencies:
       - Lint and Test WS
@@ -296,6 +304,8 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov
+      secrets:
+        - name: CODECOV_TOKEN
   - name: Build Bootstrap
     dependencies:
       - Lint and Test Bootstrap
@@ -326,6 +336,8 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov
+      secrets:
+        - name: CODECOV_TOKEN
   - name: Build Certs
     dependencies:
       - Lint and Test Certs
@@ -356,6 +368,8 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov
+      secrets:
+        - name: CODECOV_TOKEN
   - name: Build Provision
     dependencies:
       - Lint and Test Provision
@@ -386,6 +400,8 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov
+      secrets:
+        - name: CODECOV_TOKEN
   - name: Build Twins
     dependencies:
       - Lint and Test Twins
@@ -416,6 +432,8 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov
+      secrets:
+        - name: CODECOV_TOKEN
   - name: Build Readers
     dependencies:
       - Lint and Test Readers
@@ -450,6 +468,8 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov
+      secrets:
+        - name: CODECOV_TOKEN
   - name: Build Consumers
     dependencies:
       - Lint and Test Consumers
@@ -486,6 +506,8 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov
+      secrets:
+        - name: CODECOV_TOKEN
   - name: Build CLI
     dependencies:
       - Lint and Test CLI
@@ -516,6 +538,8 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov
+      secrets:
+        - name: CODECOV_TOKEN
   - name: Build LoRa
     dependencies:
       - Lint and Test LoRa
@@ -546,6 +570,8 @@ blocks:
             - go tool cover -html=coverage.out -o coverage.html
             - cache restore codecov
             - ./codecov
+      secrets:
+        - name: CODECOV_TOKEN
   - name: Build OPC-UA
     dependencies:
       - Lint and Test OPC-UA
