@@ -52,13 +52,17 @@ func (c browser) Browse(serverURI, nodeID string) ([]opcua.BrowsedNode, error) {
 		opcuagocpua.SecurityMode(uagocpua.MessageSecurityModeNone),
 	}
 
-	oc := opcuagocpua.NewClient(serverURI, opts...)
+	oc, err := opcuagocpua.NewClient(serverURI, opts...)
+	if err != nil {
+		return nil, errors.Wrap(errFailedCreateClient, err)
+	}
+
 	if err := oc.Connect(c.ctx); err != nil {
 		return nil, errors.Wrap(errFailedConn, err)
 	}
-	defer oc.Close()
+	defer oc.Close(c.ctx)
 
-	nodeList, err := browse(oc, nodeID, "", 0)
+	nodeList, err := browse(c.ctx, oc, nodeID, "", 0)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +83,7 @@ func (c browser) Browse(serverURI, nodeID string) ([]opcua.BrowsedNode, error) {
 	return nodes, nil
 }
 
-func browse(oc *opcuagocpua.Client, nodeID, path string, level int) ([]NodeDef, error) {
+func browse(ctx context.Context, oc *opcuagocpua.Client, nodeID, path string, level int) ([]NodeDef, error) {
 	if level > maxChildrens {
 		return nil, nil
 	}
@@ -91,6 +95,7 @@ func browse(oc *opcuagocpua.Client, nodeID, path string, level int) ([]NodeDef, 
 	n := oc.Node(nid)
 
 	attrs, err := n.Attributes(
+		ctx,
 		uagocpua.AttributeIDNodeClass,
 		uagocpua.AttributeIDBrowseName,
 		uagocpua.AttributeIDDescription,
@@ -181,19 +186,19 @@ func browse(oc *opcuagocpua.Client, nodeID, path string, level int) ([]NodeDef, 
 		nodes = append(nodes, def)
 	}
 
-	bc, err := browseChildren(oc, n, def.Path, level, id.HasComponent)
+	bc, err := browseChildren(ctx, oc, n, def.Path, level, id.HasComponent)
 	if err != nil {
 		return nil, err
 	}
 	nodes = append(nodes, bc...)
 
-	bc, err = browseChildren(oc, n, def.Path, level, id.Organizes)
+	bc, err = browseChildren(ctx, oc, n, def.Path, level, id.Organizes)
 	if err != nil {
 		return nil, err
 	}
 	nodes = append(nodes, bc...)
 
-	bc, err = browseChildren(oc, n, def.Path, level, id.HasProperty)
+	bc, err = browseChildren(ctx, oc, n, def.Path, level, id.HasProperty)
 	if err != nil {
 		return nil, err
 	}
@@ -202,15 +207,15 @@ func browse(oc *opcuagocpua.Client, nodeID, path string, level int) ([]NodeDef, 
 	return nodes, nil
 }
 
-func browseChildren(c *opcuagocpua.Client, n *opcuagocpua.Node, path string, level int, typeDef uint32) ([]NodeDef, error) {
+func browseChildren(ctx context.Context, c *opcuagocpua.Client, n *opcuagocpua.Node, path string, level int, typeDef uint32) ([]NodeDef, error) {
 	nodes := []NodeDef{}
-	refs, err := n.ReferencedNodes(typeDef, uagocpua.BrowseDirectionForward, uagocpua.NodeClassAll, true)
+	refs, err := n.ReferencedNodes(ctx, typeDef, uagocpua.BrowseDirectionForward, uagocpua.NodeClassAll, true)
 	if err != nil {
 		return []NodeDef{}, err
 	}
 
 	for _, ref := range refs {
-		children, err := browse(c, ref.ID.String(), path, level+1)
+		children, err := browse(ctx, c, ref.ID.String(), path, level+1)
 		if err != nil {
 			return []NodeDef{}, err
 		}

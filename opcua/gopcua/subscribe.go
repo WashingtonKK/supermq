@@ -35,6 +35,9 @@ var (
 	errFailedParseNodeID   = errors.New("failed to parse NodeID")
 	errFailedCreateReq     = errors.New("failed to create request")
 	errResponseStatus      = errors.New("response status not OK")
+	errFailedCreateClient  = errors.New("failed to create opcua client")
+
+	notifyCh chan *opcuagopcua.PublishNotificationData
 )
 
 var _ opcua.Subscriber = (*client)(nil)
@@ -76,7 +79,7 @@ func (c client) Subscribe(ctx context.Context, cfg opcua.Config) error {
 	}
 
 	if cfg.Mode != "" {
-		endpoints, err := opcuagopcua.GetEndpoints(cfg.ServerURI)
+		endpoints, err := opcuagopcua.GetEndpoints(ctx, cfg.ServerURI)
 		if err != nil {
 			return errors.Wrap(errFailedFetchEndpoint, err)
 		}
@@ -96,25 +99,30 @@ func (c client) Subscribe(ctx context.Context, cfg opcua.Config) error {
 		}
 	}
 
-	oc := opcuagopcua.NewClient(cfg.ServerURI, opts...)
+	oc, err := opcuagopcua.NewClient(cfg.ServerURI, opts...)
+	if err != nil {
+		return errors.Wrap(errFailedCreateClient, err)
+	}
+
 	if err := oc.Connect(ctx); err != nil {
 		return errors.Wrap(errFailedConn, err)
 	}
-	defer oc.Close()
+	defer oc.Close(ctx)
 
 	i, err := strconv.Atoi(cfg.Interval)
 	if err != nil {
 		return errors.Wrap(errFailedParseInterval, err)
 	}
 
-	sub, err := oc.Subscribe(&opcuagopcua.SubscriptionParameters{
+	sub, err := oc.Subscribe(ctx, &opcuagopcua.SubscriptionParameters{
 		Interval: time.Duration(i) * time.Millisecond,
-	})
+	}, notifyCh)
+
 	if err != nil {
 		return errors.Wrap(errFailedSub, err)
 	}
 	defer func() {
-		if err = sub.Cancel(); err != nil {
+		if err = sub.Cancel(ctx); err != nil {
 			c.logger.Error(fmt.Sprintf("subscription could not be cancelled: %s", err))
 		}
 	}()
@@ -135,7 +143,7 @@ func (c client) runHandler(ctx context.Context, sub *opcuagopcua.Subscription, u
 	// arbitrary client handle for the monitoring item
 	handle := uint32(42)
 	miCreateRequest := opcuagopcua.NewMonitoredItemCreateRequestWithDefaults(nodeID, uagopcua.AttributeIDValue, handle)
-	res, err := sub.Monitor(uagopcua.TimestampsToReturnBoth, miCreateRequest)
+	res, err := sub.Monitor(ctx, uagopcua.TimestampsToReturnBoth, miCreateRequest)
 	if err != nil {
 		return errors.Wrap(errFailedCreateReq, err)
 	}
@@ -143,15 +151,13 @@ func (c client) runHandler(ctx context.Context, sub *opcuagopcua.Subscription, u
 		return errResponseStatus
 	}
 
-	go sub.Run(ctx)
-
 	c.logger.Info(fmt.Sprintf("subscribed to server %s and node_id %s", uri, node))
 
 	for {
 		select {
 		case <-c.ctx.Done():
 			return nil
-		case res := <-sub.Notifs:
+		case res := <-notifyCh:
 			if res.Error != nil {
 				c.logger.Error(res.Error.Error())
 				continue
@@ -192,7 +198,7 @@ func (c client) runHandler(ctx context.Context, sub *opcuagopcua.Subscription, u
 						msg.Data = 0
 					}
 
-					if err := c.publish(ctx, token, msg); err != nil {
+					if err := c.publish(ctx, msg); err != nil {
 						switch err {
 						case errNotFoundServerURI, errNotFoundNodeID, errNotFoundConn:
 							return err
@@ -210,7 +216,7 @@ func (c client) runHandler(ctx context.Context, sub *opcuagopcua.Subscription, u
 }
 
 // Publish forwards messages from the OPC-UA Server to Magistrala Message broker.
-func (c client) publish(ctx context.Context, token string, m message) error {
+func (c client) publish(ctx context.Context, m message) error {
 	// Get route-map of the OPC-UA ServerURI
 	chanID, err := c.channelsRM.Get(ctx, m.ServerURI)
 	if err != nil {
