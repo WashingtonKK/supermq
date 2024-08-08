@@ -160,13 +160,16 @@ func EncodeError(_ context.Context, err error, w http.ResponseWriter) {
 		errors.Contains(err, apiutil.ErrInvalidEntityType),
 		errors.Contains(err, apiutil.ErrMissingEntityType),
 		errors.Contains(err, apiutil.ErrInvalidTimeFormat),
-		errors.Contains(err, svcerr.ErrSearch):
+		errors.Contains(err, svcerr.ErrSearch),
+		errors.Contains(err, apiutil.ErrEmptySearchQuery),
+		errors.Contains(err, apiutil.ErrLenSearchQuery):
 		err = unwrap(err)
 		w.WriteHeader(http.StatusBadRequest)
 
 	case errors.Contains(err, svcerr.ErrCreateEntity),
 		errors.Contains(err, svcerr.ErrUpdateEntity),
 		errors.Contains(err, svcerr.ErrRemoveEntity),
+		errors.Contains(err, svcerr.ErrLimitReached),
 		errors.Contains(err, svcerr.ErrEnableClient):
 		err = unwrap(err)
 		w.WriteHeader(http.StatusUnprocessableEntity)

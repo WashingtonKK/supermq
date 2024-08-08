@@ -23,6 +23,7 @@ import (
 	gtracing "github.com/absmach/magistrala/internal/groups/tracing"
 	mglog "github.com/absmach/magistrala/logger"
 	"github.com/absmach/magistrala/pkg/auth"
+	constraints "github.com/absmach/magistrala/pkg/constraints/config"
 	"github.com/absmach/magistrala/pkg/groups"
 	jaegerclient "github.com/absmach/magistrala/pkg/jaeger"
 	"github.com/absmach/magistrala/pkg/postgres"
@@ -68,7 +69,7 @@ type config struct {
 	LogLevel         string        `env:"MG_THINGS_LOG_LEVEL"           envDefault:"info"`
 	StandaloneID     string        `env:"MG_THINGS_STANDALONE_ID"       envDefault:""`
 	StandaloneToken  string        `env:"MG_THINGS_STANDALONE_TOKEN"    envDefault:""`
-	JaegerURL        url.URL       `env:"MG_JAEGER_URL"                 envDefault:"http://jaeger:14268/api/traces"`
+	JaegerURL        url.URL       `env:"MG_JAEGER_URL"                   envDefault:"http://localhost:4318/v1/traces"`
 	CacheKeyDuration time.Duration `env:"MG_THINGS_CACHE_KEY_DURATION"  envDefault:"10m"`
 	SendTelemetry    bool          `env:"MG_SEND_TELEMETRY"             envDefault:"true"`
 	InstanceID       string        `env:"MG_THINGS_INSTANCE_ID"         envDefault:""`
@@ -226,11 +227,12 @@ func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, auth
 	gRepo := gpostgres.New(database)
 
 	idp := uuid.New()
+	constraintsProvider, _ := constraints.New(svcName)
 
 	thingCache := thcache.NewCache(cacheClient, keyDuration)
 
-	csvc := things.NewService(authClient, cRepo, gRepo, thingCache, idp)
-	gsvc := mggroups.NewService(gRepo, idp, authClient)
+	csvc := things.NewService(authClient, cRepo, gRepo, thingCache, idp, constraintsProvider)
+	gsvc := mggroups.NewService(gRepo, idp, constraintsProvider, authClient)
 
 	csvc, err := thevents.NewEventStoreMiddleware(ctx, csvc, esURL)
 	if err != nil {

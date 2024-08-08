@@ -5,6 +5,9 @@ package cli
 
 import (
 	"encoding/json"
+	"fmt"
+	"net/url"
+	"strconv"
 
 	mgclients "github.com/absmach/magistrala/pkg/clients"
 	mgxsdk "github.com/absmach/magistrala/pkg/sdk/go"
@@ -20,7 +23,7 @@ var cmdUsers = []cobra.Command{
 			"\tmagistrala-cli users create user user@example.com 12345678 $USER_AUTH_TOKEN\n",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) < 3 || len(args) > 4 {
-				logUsage(cmd.Use)
+				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
 			if len(args) == 3 {
@@ -37,11 +40,11 @@ var cmdUsers = []cobra.Command{
 			}
 			user, err := sdk.CreateUser(user, args[3])
 			if err != nil {
-				logError(err)
+				logErrorCmd(*cmd, err)
 				return
 			}
 
-			logJSON(user)
+			logJSONCmd(*cmd, user)
 		},
 	},
 	{
@@ -54,12 +57,12 @@ var cmdUsers = []cobra.Command{
 			"\tmagistrala-cli users get <user_id> <user_auth_token> - shows user with provided <user_id>\n",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 2 {
-				logUsage(cmd.Use)
+				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
 			metadata, err := convertMetadata(Metadata)
 			if err != nil {
-				logError(err)
+				logErrorCmd(*cmd, err)
 				return
 			}
 			pageMetadata := mgxsdk.PageMetadata{
@@ -72,19 +75,19 @@ var cmdUsers = []cobra.Command{
 			if args[0] == all {
 				l, err := sdk.Users(pageMetadata, args[1])
 				if err != nil {
-					logError(err)
+					logErrorCmd(*cmd, err)
 					return
 				}
-				logJSON(l)
+				logJSONCmd(*cmd, l)
 				return
 			}
 			u, err := sdk.User(args[0], args[1])
 			if err != nil {
-				logError(err)
+				logErrorCmd(*cmd, err)
 				return
 			}
 
-			logJSON(u)
+			logJSONCmd(*cmd, u)
 		},
 	},
 	{
@@ -95,7 +98,7 @@ var cmdUsers = []cobra.Command{
 			"\tmagistrala-cli users token user@example.com 12345678\n",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 3 && len(args) != 2 {
-				logUsage(cmd.Use)
+				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
 
@@ -109,11 +112,11 @@ var cmdUsers = []cobra.Command{
 
 			token, err := sdk.CreateToken(lg)
 			if err != nil {
-				logError(err)
+				logErrorCmd(*cmd, err)
 				return
 			}
 
-			logJSON(token)
+			logJSONCmd(*cmd, token)
 		},
 	},
 	{
@@ -124,7 +127,7 @@ var cmdUsers = []cobra.Command{
 			"\tmagistrala-cli users refreshtoken <refresh_token>\n",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 2 && len(args) != 1 {
-				logUsage(cmd.Use)
+				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
 
@@ -134,11 +137,11 @@ var cmdUsers = []cobra.Command{
 			}
 			token, err := sdk.RefreshToken(lg, args[0])
 			if err != nil {
-				logError(err)
+				logErrorCmd(*cmd, err)
 				return
 			}
 
-			logJSON(token)
+			logJSONCmd(*cmd, token)
 		},
 	},
 	{
@@ -151,24 +154,24 @@ var cmdUsers = []cobra.Command{
 			"\tmagistrala-cli users update identity <user_id> newidentity@example.com $USERTOKEN - updates user identity\n",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 4 && len(args) != 3 {
-				logUsage(cmd.Use)
+				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
 
 			var user mgxsdk.User
 			if args[0] == "tags" {
 				if err := json.Unmarshal([]byte(args[2]), &user.Tags); err != nil {
-					logError(err)
+					logErrorCmd(*cmd, err)
 					return
 				}
 				user.ID = args[1]
 				user, err := sdk.UpdateUserTags(user, args[3])
 				if err != nil {
-					logError(err)
+					logErrorCmd(*cmd, err)
 					return
 				}
 
-				logJSON(user)
+				logJSONCmd(*cmd, user)
 				return
 			}
 
@@ -177,11 +180,11 @@ var cmdUsers = []cobra.Command{
 				user.Credentials.Identity = args[2]
 				user, err := sdk.UpdateUserIdentity(user, args[3])
 				if err != nil {
-					logError(err)
+					logErrorCmd(*cmd, err)
 					return
 				}
 
-				logJSON(user)
+				logJSONCmd(*cmd, user)
 				return
 
 			}
@@ -191,27 +194,27 @@ var cmdUsers = []cobra.Command{
 				user.Role = args[2]
 				user, err := sdk.UpdateUserRole(user, args[3])
 				if err != nil {
-					logError(err)
+					logErrorCmd(*cmd, err)
 					return
 				}
 
-				logJSON(user)
+				logJSONCmd(*cmd, user)
 				return
 
 			}
 
 			if err := json.Unmarshal([]byte(args[1]), &user); err != nil {
-				logError(err)
+				logErrorCmd(*cmd, err)
 				return
 			}
 			user.ID = args[0]
 			user, err := sdk.UpdateUser(user, args[2])
 			if err != nil {
-				logError(err)
+				logErrorCmd(*cmd, err)
 				return
 			}
 
-			logJSON(user)
+			logJSONCmd(*cmd, user)
 		},
 	},
 	{
@@ -222,17 +225,17 @@ var cmdUsers = []cobra.Command{
 			"\tmagistrala-cli users profile $USERTOKEN\n",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 1 {
-				logUsage(cmd.Use)
+				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
 
 			user, err := sdk.UserProfile(args[0])
 			if err != nil {
-				logError(err)
+				logErrorCmd(*cmd, err)
 				return
 			}
 
-			logJSON(user)
+			logJSONCmd(*cmd, user)
 		},
 	},
 	{
@@ -243,16 +246,16 @@ var cmdUsers = []cobra.Command{
 			"\tmagistrala-cli users resetpasswordrequest example@mail.com\n",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 1 {
-				logUsage(cmd.Use)
+				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
 
 			if err := sdk.ResetPasswordRequest(args[0]); err != nil {
-				logError(err)
+				logErrorCmd(*cmd, err)
 				return
 			}
 
-			logOK()
+			logOKCmd(*cmd)
 		},
 	},
 	{
@@ -263,16 +266,16 @@ var cmdUsers = []cobra.Command{
 			"\tmagistrala-cli users resetpassword 12345678 12345678 $REQUESTTOKEN\n",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 3 {
-				logUsage(cmd.Use)
+				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
 
 			if err := sdk.ResetPassword(args[0], args[1], args[2]); err != nil {
-				logError(err)
+				logErrorCmd(*cmd, err)
 				return
 			}
 
-			logOK()
+			logOKCmd(*cmd)
 		},
 	},
 	{
@@ -283,17 +286,17 @@ var cmdUsers = []cobra.Command{
 			"\tmagistrala-cli users password old_password new_password $USERTOKEN\n",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 3 {
-				logUsage(cmd.Use)
+				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
 
 			user, err := sdk.UpdatePassword(args[0], args[1], args[2])
 			if err != nil {
-				logError(err)
+				logErrorCmd(*cmd, err)
 				return
 			}
 
-			logJSON(user)
+			logJSONCmd(*cmd, user)
 		},
 	},
 	{
@@ -304,17 +307,17 @@ var cmdUsers = []cobra.Command{
 			"\tmagistrala-cli users enable <user_id> <user_auth_token>\n",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 2 {
-				logUsage(cmd.Use)
+				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
 
 			user, err := sdk.EnableUser(args[0], args[1])
 			if err != nil {
-				logError(err)
+				logErrorCmd(*cmd, err)
 				return
 			}
 
-			logJSON(user)
+			logJSONCmd(*cmd, user)
 		},
 	},
 	{
@@ -325,17 +328,17 @@ var cmdUsers = []cobra.Command{
 			"\tmagistrala-cli users disable <user_id> <user_auth_token>\n",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 2 {
-				logUsage(cmd.Use)
+				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
 
 			user, err := sdk.DisableUser(args[0], args[1])
 			if err != nil {
-				logError(err)
+				logErrorCmd(*cmd, err)
 				return
 			}
 
-			logJSON(user)
+			logJSONCmd(*cmd, user)
 		},
 	},
 	{
@@ -346,14 +349,14 @@ var cmdUsers = []cobra.Command{
 			"\tmagistrala-cli users delete <user_id> $USERTOKEN - delete user with <user_id>\n",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 2 {
-				logUsage(cmd.Use)
+				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
 			if err := sdk.DeleteUser(args[0], args[1]); err != nil {
-				logError(err)
+				logErrorCmd(*cmd, err)
 				return
 			}
-			logOK()
+			logOKCmd(*cmd)
 		},
 	},
 	{
@@ -364,7 +367,7 @@ var cmdUsers = []cobra.Command{
 			"\tmagistrala-cli users channels <user_id> <user_auth_token>\n",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 2 {
-				logUsage(cmd.Use)
+				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
 
@@ -375,11 +378,11 @@ var cmdUsers = []cobra.Command{
 
 			cp, err := sdk.ListUserChannels(args[0], pm, args[1])
 			if err != nil {
-				logError(err)
+				logErrorCmd(*cmd, err)
 				return
 			}
 
-			logJSON(cp)
+			logJSONCmd(*cmd, cp)
 		},
 	},
 
@@ -391,7 +394,7 @@ var cmdUsers = []cobra.Command{
 			"\tmagistrala-cli users things <user_id> <user_auth_token>\n",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 2 {
-				logUsage(cmd.Use)
+				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
 
@@ -402,11 +405,11 @@ var cmdUsers = []cobra.Command{
 
 			tp, err := sdk.ListUserThings(args[0], pm, args[1])
 			if err != nil {
-				logError(err)
+				logErrorCmd(*cmd, err)
 				return
 			}
 
-			logJSON(tp)
+			logJSONCmd(*cmd, tp)
 		},
 	},
 
@@ -418,7 +421,7 @@ var cmdUsers = []cobra.Command{
 			"\tmagistrala-cli users domains <user_id> <user_auth_token>\n",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 2 {
-				logUsage(cmd.Use)
+				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
 
@@ -429,11 +432,11 @@ var cmdUsers = []cobra.Command{
 
 			dp, err := sdk.ListUserDomains(args[0], pm, args[1])
 			if err != nil {
-				logError(err)
+				logErrorCmd(*cmd, err)
 				return
 			}
 
-			logJSON(dp)
+			logJSONCmd(*cmd, dp)
 		},
 	},
 
@@ -445,7 +448,7 @@ var cmdUsers = []cobra.Command{
 			"\tmagistrala-cli users groups <user_id> <user_auth_token>\n",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 2 {
-				logUsage(cmd.Use)
+				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
 
@@ -456,11 +459,53 @@ var cmdUsers = []cobra.Command{
 
 			users, err := sdk.ListUserGroups(args[0], pm, args[1])
 			if err != nil {
-				logError(err)
+				logErrorCmd(*cmd, err)
 				return
 			}
 
-			logJSON(users)
+			logJSONCmd(*cmd, users)
+		},
+	},
+
+	{
+		Use:   "search <query> <user_auth_token>",
+		Short: "Search users",
+		Long: "Search users by query\n" +
+			"Usage:\n" +
+			"\tmagistrala-cli users search <query> <user_auth_token>\n",
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) != 2 {
+				logUsageCmd(*cmd, cmd.Use)
+				return
+			}
+
+			values, err := url.ParseQuery(args[0])
+			if err != nil {
+				logErrorCmd(*cmd, fmt.Errorf("failed to parse query: %s", err))
+			}
+
+			pm := mgxsdk.PageMetadata{
+				Offset: Offset,
+				Limit:  Limit,
+				Name:   values.Get("name"),
+				ID:     values.Get("id"),
+			}
+
+			if off, err := strconv.Atoi(values.Get("offset")); err == nil {
+				pm.Offset = uint64(off)
+			}
+
+			if lim, err := strconv.Atoi(values.Get("limit")); err == nil {
+				pm.Limit = uint64(lim)
+			}
+
+			users, err := sdk.SearchUsers(pm, args[1])
+			if err != nil {
+				logErrorCmd(*cmd, err)
+				return
+			}
+
+			logJSONCmd(*cmd, users)
 		},
 	},
 }
@@ -468,7 +513,7 @@ var cmdUsers = []cobra.Command{
 // NewUsersCmd returns users command.
 func NewUsersCmd() *cobra.Command {
 	cmd := cobra.Command{
-		Use:   "users [create | get | update | token | password | enable | disable | delete | channels | things | groups]",
+		Use:   "users [create | get | update | token | password | enable | disable | delete | channels | things | groups | search]",
 		Short: "Users management",
 		Long:  `Users management: create accounts and tokens"`,
 	}

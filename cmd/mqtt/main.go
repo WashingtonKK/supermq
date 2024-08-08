@@ -44,6 +44,7 @@ import (
 const (
 	svcName        = "mqtt"
 	envPrefixAuthz = "MG_THINGS_AUTH_GRPC_"
+	wsPathPrefix   = "/mqtt"
 )
 
 type config struct {
@@ -59,7 +60,7 @@ type config struct {
 	HTTPTargetPort        string        `env:"MG_MQTT_ADAPTER_WS_TARGET_PORT"               envDefault:"8080"`
 	HTTPTargetPath        string        `env:"MG_MQTT_ADAPTER_WS_TARGET_PATH"               envDefault:"/mqtt"`
 	Instance              string        `env:"MG_MQTT_ADAPTER_INSTANCE"                     envDefault:""`
-	JaegerURL             url.URL       `env:"MG_JAEGER_URL"                                envDefault:"http://localhost:14268/api/traces"`
+	JaegerURL             url.URL       `env:"MG_JAEGER_URL"                   envDefault:"http://localhost:4318/v1/traces"`
 	BrokerURL             string        `env:"MG_MESSAGE_BROKER_URL"                        envDefault:"nats://localhost:4222"`
 	SendTelemetry         bool          `env:"MG_SEND_TELEMETRY"                            envDefault:"true"`
 	InstanceID            string        `env:"MG_MQTT_ADAPTER_INSTANCE_ID"                  envDefault:""`
@@ -233,12 +234,12 @@ func proxyMQTT(ctx context.Context, cfg config, logger *slog.Logger, sessionHand
 func proxyWS(ctx context.Context, cfg config, logger *slog.Logger, sessionHandler session.Handler, interceptor session.Interceptor) error {
 	config := mproxy.Config{
 		Address:    fmt.Sprintf("%s:%s", "", cfg.HTTPPort),
-		Target:     fmt.Sprintf("%s:%s", cfg.HTTPTargetHost, cfg.HTTPTargetPort),
-		PathPrefix: "/mqtt",
+		Target:     fmt.Sprintf("ws://%s:%s%s", cfg.HTTPTargetHost, cfg.HTTPTargetPort, wsPathPrefix),
+		PathPrefix: wsPathPrefix,
 	}
 
 	wp := websocket.New(config, sessionHandler, interceptor, logger)
-	http.HandleFunc("/mqtt", wp.ServeHTTP)
+	http.HandleFunc(wsPathPrefix, wp.ServeHTTP)
 
 	errCh := make(chan error)
 

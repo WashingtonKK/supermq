@@ -110,27 +110,29 @@ type Service interface {
 var _ Service = (*service)(nil)
 
 type service struct {
-	keys               KeyRepository
-	domains            DomainsRepository
-	idProvider         magistrala.IDProvider
-	agent              PolicyAgent
-	tokenizer          Tokenizer
-	loginDuration      time.Duration
-	refreshDuration    time.Duration
-	invitationDuration time.Duration
+	keys                KeyRepository
+	domains             DomainsRepository
+	idProvider          magistrala.IDProvider
+	constraintsProvider magistrala.Constraints
+	agent               PolicyAgent
+	tokenizer           Tokenizer
+	loginDuration       time.Duration
+	refreshDuration     time.Duration
+	invitationDuration  time.Duration
 }
 
 // New instantiates the auth service implementation.
-func New(keys KeyRepository, domains DomainsRepository, idp magistrala.IDProvider, tokenizer Tokenizer, policyAgent PolicyAgent, loginDuration, refreshDuration, invitationDuration time.Duration) Service {
+func New(keys KeyRepository, domains DomainsRepository, idp magistrala.IDProvider, constrProvider magistrala.Constraints, tokenizer Tokenizer, policyAgent PolicyAgent, loginDuration, refreshDuration, invitationDuration time.Duration) Service {
 	return &service{
-		tokenizer:          tokenizer,
-		domains:            domains,
-		keys:               keys,
-		idProvider:         idp,
-		agent:              policyAgent,
-		loginDuration:      loginDuration,
-		refreshDuration:    refreshDuration,
-		invitationDuration: invitationDuration,
+		tokenizer:           tokenizer,
+		domains:             domains,
+		keys:                keys,
+		idProvider:          idp,
+		agent:               policyAgent,
+		loginDuration:       loginDuration,
+		refreshDuration:     refreshDuration,
+		invitationDuration:  invitationDuration,
+		constraintsProvider: constrProvider,
 	}
 }
 
@@ -594,6 +596,16 @@ func (svc service) CreateDomain(ctx context.Context, token string, d Domain) (do
 	}
 	d.CreatedBy = key.User
 
+	ds, err := svc.domains.ListDomains(ctx, Page{})
+	if err != nil {
+		return Domain{}, err
+	}
+
+	err = svc.constraintsProvider.CheckLimits(magistrala.Create, ds.Total)
+	if err != nil {
+		return Domain{}, err
+	}
+
 	domainID, err := svc.idProvider.ID()
 	if err != nil {
 		return Domain{}, errors.Wrap(svcerr.ErrCreateEntity, err)
@@ -810,20 +822,18 @@ func (svc service) UnassignUser(ctx context.Context, token, id, userID string) e
 		}
 	}
 
+	if err := svc.DeletePolicyFilter(ctx, PolicyReq{
+		Subject:     EncodeDomainUserID(id, userID),
+		SubjectType: UserType,
+	}); err != nil {
+		return errors.Wrap(errRemovePolicies, err)
+	}
+
 	pc := Policy{
 		SubjectType: UserType,
 		SubjectID:   userID,
 		ObjectType:  DomainType,
 		ObjectID:    id,
-	}
-	if err := svc.DeletePolicyFilter(ctx, PolicyReq{
-		Subject:     EncodeDomainUserID(id, userID),
-		SubjectType: UserType,
-		SubjectKind: UsersKind,
-		Object:      id,
-		ObjectType:  DomainType,
-	}); err != nil {
-		return errors.Wrap(errRemovePolicies, err)
 	}
 
 	if err := svc.domains.DeletePolicies(ctx, pc); err != nil {

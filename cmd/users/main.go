@@ -26,6 +26,7 @@ import (
 	mglog "github.com/absmach/magistrala/logger"
 	"github.com/absmach/magistrala/pkg/auth"
 	mgclients "github.com/absmach/magistrala/pkg/clients"
+	constraints "github.com/absmach/magistrala/pkg/constraints/config"
 	svcerr "github.com/absmach/magistrala/pkg/errors/service"
 	"github.com/absmach/magistrala/pkg/groups"
 	jaegerclient "github.com/absmach/magistrala/pkg/jaeger"
@@ -69,7 +70,7 @@ type config struct {
 	AdminPassword      string        `env:"MG_USERS_ADMIN_PASSWORD"      envDefault:"12345678"`
 	PassRegexText      string        `env:"MG_USERS_PASS_REGEX"          envDefault:"^.{8,}$"`
 	ResetURL           string        `env:"MG_TOKEN_RESET_ENDPOINT"      envDefault:"/reset-request"`
-	JaegerURL          url.URL       `env:"MG_JAEGER_URL"                envDefault:"http://localhost:14268/api/traces"`
+	JaegerURL          url.URL       `env:"MG_JAEGER_URL"                   envDefault:"http://localhost:4318/v1/traces"`
 	SendTelemetry      bool          `env:"MG_SEND_TELEMETRY"            envDefault:"true"`
 	InstanceID         string        `env:"MG_USERS_INSTANCE_ID"         envDefault:""`
 	ESURL              string        `env:"MG_ES_URL"                    envDefault:"nats://localhost:4222"`
@@ -214,6 +215,7 @@ func newService(ctx context.Context, authClient magistrala.AuthServiceClient, db
 	gRepo := gpostgres.New(database)
 
 	idp := uuid.New()
+	constraintsProvider, _ := constraints.New(svcName)
 	hsr := hasher.New()
 
 	emailerClient, err := emailer.New(c.ResetURL, &ec)
@@ -221,8 +223,8 @@ func newService(ctx context.Context, authClient magistrala.AuthServiceClient, db
 		logger.Error(fmt.Sprintf("failed to configure e-mailing util: %s", err.Error()))
 	}
 
-	csvc := users.NewService(cRepo, authClient, emailerClient, hsr, idp, c.SelfRegister)
-	gsvc := mggroups.NewService(gRepo, idp, authClient)
+	csvc := users.NewService(cRepo, authClient, emailerClient, hsr, idp, constraintsProvider, c.SelfRegister)
+	gsvc := mggroups.NewService(gRepo, idp, constraintsProvider, authClient)
 
 	csvc, err = uevents.NewEventStoreMiddleware(ctx, csvc, c.ESURL)
 	if err != nil {

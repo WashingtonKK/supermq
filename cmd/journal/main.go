@@ -37,7 +37,7 @@ import (
 
 const (
 	svcName        = "journal"
-	envPrefixDB    = "MG_JOURNAL_"
+	envPrefixDB    = "MG_JOURNAL_DB_"
 	envPrefixHTTP  = "MG_JOURNAL_HTTP_"
 	envPrefixAuth  = "MG_AUTH_GRPC_"
 	defDB          = "journal"
@@ -47,7 +47,7 @@ const (
 type config struct {
 	LogLevel      string  `env:"MG_JOURNAL_LOG_LEVEL"   envDefault:"info"`
 	ESURL         string  `env:"MG_ES_URL"              envDefault:"nats://localhost:4222"`
-	JaegerURL     url.URL `env:"MG_JAEGER_URL"          envDefault:"http://jaeger:14268/api/traces"`
+	JaegerURL     url.URL `env:"MG_JAEGER_URL"                   envDefault:"http://localhost:4318/v1/traces"`
 	SendTelemetry bool    `env:"MG_SEND_TELEMETRY"      envDefault:"true"`
 	InstanceID    string  `env:"MG_JOURNAL_INSTANCE_ID" envDefault:""`
 	TraceRatio    float64 `env:"MG_JAEGER_TRACE_RATIO"  envDefault:"1.0"`

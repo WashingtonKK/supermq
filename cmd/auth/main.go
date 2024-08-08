@@ -24,6 +24,7 @@ import (
 	"github.com/absmach/magistrala/auth/spicedb"
 	"github.com/absmach/magistrala/auth/tracing"
 	mglog "github.com/absmach/magistrala/logger"
+	constraints "github.com/absmach/magistrala/pkg/constraints/config"
 	"github.com/absmach/magistrala/pkg/jaeger"
 	"github.com/absmach/magistrala/pkg/postgres"
 	pgclient "github.com/absmach/magistrala/pkg/postgres"
@@ -57,7 +58,7 @@ const (
 type config struct {
 	LogLevel            string        `env:"MG_AUTH_LOG_LEVEL"               envDefault:"info"`
 	SecretKey           string        `env:"MG_AUTH_SECRET_KEY"              envDefault:"secret"`
-	JaegerURL           url.URL       `env:"MG_JAEGER_URL"                   envDefault:"http://localhost:14268/api/traces"`
+	JaegerURL           url.URL       `env:"MG_JAEGER_URL"                   envDefault:"http://localhost:4318/v1/traces"`
 	SendTelemetry       bool          `env:"MG_SEND_TELEMETRY"               envDefault:"true"`
 	InstanceID          string        `env:"MG_AUTH_ADAPTER_INSTANCE_ID"     envDefault:""`
 	AccessDuration      time.Duration `env:"MG_AUTH_ACCESS_TOKEN_DURATION"   envDefault:"1h"`
@@ -209,10 +210,11 @@ func newService(ctx context.Context, db *sqlx.DB, tracer trace.Tracer, cfg confi
 	domainsRepo := apostgres.NewDomainRepository(database)
 	pa := spicedb.NewPolicyAgent(spicedbClient, logger)
 	idProvider := uuid.New()
+	constraintProvider, _ := constraints.New(svcName)
 
 	t := jwt.New([]byte(cfg.SecretKey))
 
-	svc := auth.New(keysRepo, domainsRepo, idProvider, t, pa, cfg.AccessDuration, cfg.RefreshDuration, cfg.InvitationDuration)
+	svc := auth.New(keysRepo, domainsRepo, idProvider, constraintProvider, t, pa, cfg.AccessDuration, cfg.RefreshDuration, cfg.InvitationDuration)
 	svc, err := events.NewEventStoreMiddleware(ctx, svc, cfg.ESURL)
 	if err != nil {
 		logger.Error(fmt.Sprintf("failed to init event store middleware : %s", err))
