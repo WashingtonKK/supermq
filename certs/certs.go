@@ -5,6 +5,7 @@ package certs
 
 import (
 	"context"
+	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
@@ -13,6 +14,49 @@ import (
 
 	"github.com/absmach/supermq/pkg/errors"
 )
+
+type CertType int
+
+const (
+	RootCA CertType = iota
+	IntermediateCA
+	ClientCert
+)
+
+const (
+	Root    = "RootCA"
+	Inter   = "IntermediateCA"
+	Client  = "ClientCert"
+	Unknown = "Unknown"
+
+	downloadTokenExpiry = time.Minute * 5
+)
+
+func (c CertType) String() string {
+	switch c {
+	case RootCA:
+		return Root
+	case IntermediateCA:
+		return Inter
+	case ClientCert:
+		return Client
+	default:
+		return Unknown
+	}
+}
+
+func CertTypeFromString(s string) (CertType, error) {
+	switch s {
+	case Root:
+		return RootCA, nil
+	case Inter:
+		return IntermediateCA, nil
+	case Client:
+		return ClientCert, nil
+	default:
+		return -1, errors.New("unknown cert type")
+	}
+}
 
 type Cert struct {
 	SerialNumber string    `json:"serial_number"`
@@ -23,6 +67,8 @@ type Cert struct {
 	ExpiryTime   time.Time `json:"expiry_time"`
 	ClientID     string    `json:"entity_id"`
 	Revoked      bool      `json:"revoked"`
+	Type         CertType  `db:"type"`
+	DownloadUrl  string    `db:"-"`
 }
 
 type CertPage struct {
@@ -30,6 +76,18 @@ type CertPage struct {
 	Offset       uint64 `json:"offset"`
 	Limit        uint64 `json:"limit"`
 	Certificates []Cert `json:"certificates,omitempty"`
+}
+
+type CSR struct {
+	CSR        []byte `json:"csr,omitempty"`
+	PrivateKey []byte `json:"private_key,omitempty"`
+}
+
+type CA struct {
+	Type         CertType
+	Certificate  *x509.Certificate
+	PrivateKey   *rsa.PrivateKey
+	SerialNumber string
 }
 
 // Repository specifies a Config persistence API.
