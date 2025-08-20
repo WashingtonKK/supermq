@@ -5,20 +5,25 @@ package certs
 
 import (
 	"context"
+	"crypto"
+	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/asn1"
 	"encoding/pem"
 	"math/big"
+	"net"
 	"time"
 
+	"github.com/absmach/certs"
 	"github.com/absmach/supermq/pkg/errors"
 	svcerr "github.com/absmach/supermq/pkg/errors/service"
 	mgsdk "github.com/absmach/supermq/pkg/sdk"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/ocsp"
-	"github.com/absmach/certs"
 )
 
 var (
@@ -37,60 +42,6 @@ var (
 
 var _ Service = (*certsService)(nil)
 
-// Service specifies an API that must be fulfilled by the domain service
-// implementation, and all of its decorators (e.g. logging & metrics).
-type Service interface {
-	// IssueCert issues certificate for given client id if access is granted with token
-	IssueCert(ctx context.Context, domainID, token, clientID, ttl string) (Cert, error)
-
-	// ListCerts lists certificates issued for a given client ID
-	ListCerts(ctx context.Context, clientID string, pm PageMetadata) (CertPage, error)
-
-	// ListSerials lists certificate serial IDs issued for a given client ID
-	ListSerials(ctx context.Context, clientID string, pm PageMetadata) (CertPage, error)
-
-	// ViewCert retrieves the certificate issued for a given serial ID
-	ViewCert(ctx context.Context, serialID string) (Cert, error)
-
-	// RevokeCert revokes a certificate for a given client ID
-	RevokeCert(ctx context.Context, domainID, token, clientID string) (Revoke, error)
-
-	// RevokeBySerial revokes a certificate by its serial number from both PKI and database
-	RevokeBySerial(ctx context.Context, serialID string) (Revoke, error)
-
-	// OCSP retrieves the OCSP response for a certificate.
-	OCSP(ctx context.Context, serialNumber string) (*Cert, int, *x509.Certificate, error)
-
-	// GetEntityID retrieves the entity ID for a certificate.
-	GetEntityID(ctx context.Context, serialNumber string) (string, error)
-
-	// GenerateCRL creates cert revocation list.
-	GenerateCRL(ctx context.Context, caType CertType) ([]byte, error)
-
-	// GetChainCA retrieves the chain of CA i.e. root and intermediate cert concat together.
-	GetChainCA(ctx context.Context, token string) (Cert, error)
-
-	// RemoveCert deletes a cert for a provided  entityID.
-	RemoveCert(ctx context.Context, entityId string) error
-
-	// IssueFromCSR creates a certificate from a given CSR.
-	IssueFromCSR(ctx context.Context, entityID, ttl string, csr CSR) (Cert, error)
-
-	// RevokeCerts revokes all certificates for a given entity ID.
-	RevokeCerts(ctx context.Context, entityID string) error
-
-	// RetrieveCertDownloadToken generates a certificate download token.
-	// The token is needed to download the client certificate.
-	RetrieveCertDownloadToken(ctx context.Context, serialNumber string) (string, error)
-
-	// RetrieveCAToken generates a CA download and view token.
-	// The token is needed to view and download the CA certificate.
-	RetrieveCAToken(ctx context.Context) (string, error)
-
-	// RetrieveCert retrieves a certificate record from the database.
-	RetrieveCert(ctx context.Context, token, serialNumber string) (Cert, []byte, error)
-}
-
 // Revoke defines the conditions to revoke a certificate.
 type Revoke struct {
 	RevocationTime time.Time `json:"revocation_time"`
@@ -104,12 +55,27 @@ type certsService struct {
 }
 
 // New returns new Certs service.
-func New(sdk mgsdk.SDK, certsRepo Repository, pkiAgent Agent) Service {
-	return &certsService{
+func New(ctx context.Context, sdk mgsdk.SDK, certsRepo Repository, pkiAgent Agent, config *Config) (Service, error) {
+	svc := certsService{
 		sdk:       sdk,
 		pki:       pkiAgent,
 		certsRepo: certsRepo,
 	}
+
+	// check if root ca should be rotated
+	if svc.shouldRotate(RootCA) {
+		if err := svc.rotateCA(ctx, RootCA, config); err != nil {
+			return &svc, err
+		}
+	}
+
+	if svc.shouldRotate(IntermediateCA) {
+		if err := svc.rotateCA(ctx, IntermediateCA, config); err != nil {
+			return &svc, err
+		}
+	}
+
+	return &svc, nil
 }
 
 func (cs *certsService) IssueCert(ctx context.Context, domainID, token, clientID, ttl string) (Cert, error) {
@@ -125,7 +91,7 @@ func (cs *certsService) IssueCert(ctx context.Context, domainID, token, clientID
 		return Cert{}, errors.Wrap(ErrFailedCertCreation, err)
 	}
 
-	_, err = cs.certsRepo.Save(ctx, cert)
+	err = cs.certsRepo.CreateCert(ctx, cert)
 	if err != nil {
 		return Cert{}, errors.Wrap(ErrFailedCertCreation, err)
 	}
@@ -146,7 +112,11 @@ func (cs *certsService) RevokeCert(ctx context.Context, domainID, token, clientI
 	var revoke Revoke
 	var err error
 
-	cp, err := cs.certsRepo.RetrieveByClient(ctx, clientID, PageMetadata{Offset: 0, Limit: 10000})
+	cp, err := cs.certsRepo.ListCerts(ctx, PageMetadata{
+		Offset:   0,
+		Limit:    10000,
+		EntityID: clientID,
+	})
 	if err != nil {
 		return revoke, errors.Wrap(ErrFailedCertRevocation, err)
 	}
@@ -158,7 +128,7 @@ func (cs *certsService) RevokeCert(ctx context.Context, domainID, token, clientI
 		}
 
 		c.Revoked = true
-		err = cs.certsRepo.Update(ctx, c)
+		err = cs.certsRepo.UpdateCert(ctx, c)
 		if err != nil {
 			return revoke, errors.Wrap(ErrFailedReadFromDB, err)
 		}
@@ -172,7 +142,7 @@ func (cs *certsService) RevokeCert(ctx context.Context, domainID, token, clientI
 func (cs *certsService) RevokeBySerial(ctx context.Context, serialID string) (Revoke, error) {
 	var revoke Revoke
 
-	cert, err := cs.certsRepo.RetrieveBySerial(ctx, serialID)
+	cert, err := cs.certsRepo.RetrieveCert(ctx, serialID)
 	if err != nil {
 		return revoke, errors.Wrap(ErrFailedReadFromDB, err)
 	}
@@ -183,7 +153,7 @@ func (cs *certsService) RevokeBySerial(ctx context.Context, serialID string) (Re
 	}
 
 	cert.Revoked = true
-	err = cs.certsRepo.Update(ctx, cert)
+	err = cs.certsRepo.UpdateCert(ctx, cert)
 	if err != nil {
 		return revoke, errors.Wrap(ErrFailedReadFromDB, err)
 	}
@@ -193,7 +163,8 @@ func (cs *certsService) RevokeBySerial(ctx context.Context, serialID string) (Re
 }
 
 func (cs *certsService) ListCerts(ctx context.Context, clientID string, pm PageMetadata) (CertPage, error) {
-	cp, err := cs.certsRepo.RetrieveByClient(ctx, clientID, pm)
+	pm.EntityID = clientID
+	cp, err := cs.certsRepo.ListCerts(ctx, pm)
 	if err != nil {
 		return CertPage{}, errors.Wrap(svcerr.ErrViewEntity, err)
 	}
@@ -211,7 +182,8 @@ func (cs *certsService) ListCerts(ctx context.Context, clientID string, pm PageM
 }
 
 func (cs *certsService) ListSerials(ctx context.Context, clientID string, pm PageMetadata) (CertPage, error) {
-	cp, err := cs.certsRepo.RetrieveByClient(ctx, clientID, pm)
+	pm.EntityID = clientID
+	cp, err := cs.certsRepo.ListCerts(ctx, pm)
 	if err != nil {
 		return CertPage{}, errors.Wrap(svcerr.ErrViewEntity, err)
 	}
@@ -220,7 +192,7 @@ func (cs *certsService) ListSerials(ctx context.Context, clientID string, pm Pag
 }
 
 func (cs *certsService) ViewCert(ctx context.Context, serialID string) (Cert, error) {
-	cert, err := cs.certsRepo.RetrieveBySerial(ctx, serialID)
+	cert, err := cs.certsRepo.RetrieveCert(ctx, serialID)
 	if err != nil {
 		return Cert{}, errors.Wrap(ErrFailedReadFromDB, err)
 	}
@@ -270,7 +242,12 @@ func (s *certsService) RetrieveCertDownloadToken(ctx context.Context, serialNumb
 //   - string: the signed JWT token string
 //   - error: an error if the authentication fails or any other error occurs
 func (s *certsService) RetrieveCAToken(ctx context.Context) (string, error) {
-	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(downloadTokenExpiry)), Issuer: Organization, Subject: "certs"})
+	jwtToken := jwt.NewWithClaims(
+		jwt.SigningMethodHS256, jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(downloadTokenExpiry)),
+			Issuer:    Organization, Subject: "certs",
+		},
+	)
 	token, err := jwtToken.SignedString([]byte(s.intermediateCA.SerialNumber))
 	if err != nil {
 		return "", errors.Wrap(certs.ErrGetToken, err)
@@ -291,7 +268,7 @@ func (s *certsService) RenewCert(ctx context.Context, serialNumber string) error
 	if cert.Revoked {
 		return ErrCertRevoked
 	}
-	pemBlock, _ := pem.Decode(cert.Certificate)
+	pemBlock, _ := pem.Decode([]byte(cert.Certificate))
 	oldCert, err := x509.ParseCertificate(pemBlock.Bytes)
 	if err != nil {
 		return err
@@ -301,7 +278,7 @@ func (s *certsService) RenewCert(ctx context.Context, serialNumber string) error
 	}
 	oldCert.NotBefore = time.Now().UTC()
 	oldCert.NotAfter = time.Now().UTC().Add(certValidityPeriod)
-	keyBlock, _ := pem.Decode(cert.Key)
+	keyBlock, _ := pem.Decode([]byte(cert.Key))
 	privKey, err := x509.ParsePKCS1PrivateKey(keyBlock.Bytes)
 	if err != nil {
 		return err
@@ -309,11 +286,16 @@ func (s *certsService) RenewCert(ctx context.Context, serialNumber string) error
 	if s.intermediateCA.Certificate == nil || s.intermediateCA.PrivateKey == nil {
 		return ErrIntermediateCANotFound
 	}
-	newCertBytes, err := x509.CreateCertificate(rand.Reader, oldCert, s.intermediateCA.Certificate, &privKey.PublicKey, s.intermediateCA.PrivateKey)
+	newCertBytes, err := x509.CreateCertificate(
+		rand.Reader, oldCert, s.intermediateCA.Certificate, &privKey.PublicKey, s.intermediateCA.PrivateKey,
+	)
 	if err != nil {
 		return err
 	}
-	cert.Certificate = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: newCertBytes})
+	cert.Certificate = string(pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: newCertBytes,
+	}))
 	cert.ExpiryTime = oldCert.NotAfter
 	if err != s.certsRepo.UpdateCert(ctx, cert) {
 		return errors.Wrap(ErrUpdateEntity, err)
@@ -328,7 +310,7 @@ func (s *certsService) RenewCert(ctx context.Context, serialNumber string) error
 // If the certificate is revoked, it returns an OCSP status of Revoked.
 // If the server fails to retrieve the certificate, it returns an OCSP status of ServerFailed.
 // Otherwise, it returns an OCSP status of Good.
-func (s *certsService) OCSP(ctx context.Context, serialNumber string) (*Certificate, int, *x509.Certificate, error) {
+func (s *certsService) OCSP(ctx context.Context, serialNumber string) (*Cert, int, *x509.Certificate, error) {
 	cert, err := s.certsRepo.RetrieveCert(ctx, serialNumber)
 	if err != nil {
 		if errors.Contains(err, ErrNotFound) {
@@ -377,7 +359,7 @@ func (s *certsService) GenerateCRL(ctx context.Context, caType CertType) ([]byte
 	for i, cert := range revokedCerts {
 		serialNumber := new(big.Int)
 		serialNumber.SetString(cert.SerialNumber, 10)
-		revokedCertificates[i] = pkix.RevokedCert{
+		revokedCertificates[i] = pkix.RevokedCertificate{
 			SerialNumber:   serialNumber,
 			RevocationTime: cert.ExpiryTime,
 		}
@@ -408,17 +390,20 @@ func (s *certsService) GenerateCRL(ctx context.Context, caType CertType) ([]byte
 	return pemBytes, nil
 }
 
-func (s *certsService) GetChainCA(ctx context.Context, token string) (Certificate, error) {
-	if _, err := jwt.ParseWithClaims(token, &jwt.RegisteredClaims{Issuer: Organization, Subject: "certs"}, func(token *jwt.Token) (interface{}, error) {
-		return []byte(s.intermediateCA.SerialNumber), nil
-	}); err != nil {
+func (s *certsService) GetChainCA(ctx context.Context, token string) (Cert, error) {
+	if _, err := jwt.ParseWithClaims(token, &jwt.RegisteredClaims{
+		Issuer:  Organization,
+		Subject: "certs"},
+		func(token *jwt.Token) (interface{}, error) {
+			return []byte(s.intermediateCA.SerialNumber), nil
+		}); err != nil {
 		return Cert{}, errors.Wrap(err, ErrMalformedEntity)
 	}
 
 	return s.getConcatCAs(ctx)
 }
 
-func (s *certsService) IssueFromCSR(ctx context.Context, entityID, ttl string, csr CSR) (Certificate, error) {
+func (s *certsService) IssueFromCSR(ctx context.Context, entityID, ttl string, csr CSR) (Cert, error) {
 	block, _ := pem.Decode(csr.CSR)
 	if block == nil {
 		return Cert{}, errors.New("failed to parse CSR PEM")
@@ -451,11 +436,120 @@ func (s *certsService) IssueFromCSR(ctx context.Context, entityID, ttl string, c
 	return cert, nil
 }
 
+func (s *certsService) issue(ctx context.Context, entityID, ttl string, ipAddrs []string, options SubjectOptions, pubKey crypto.PublicKey, privKey crypto.PrivateKey, exts []pkix.Extension) (Cert, error) {
+	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
+	if err != nil {
+		return Cert{}, err
+	}
+
+	subject := subjectFromOpts(options)
+	if privKey != nil {
+		switch privKey.(type) {
+		case *rsa.PrivateKey, *ecdsa.PrivateKey, *ed25519.PrivateKey:
+			break
+		default:
+			return Cert{}, errors.Wrap(ErrCreateEntity, ErrPrivKeyType)
+		}
+	}
+
+	switch pubKey.(type) {
+	case *rsa.PublicKey, *ecdsa.PublicKey, *ed25519.PublicKey:
+		break
+	default:
+		return Cert{}, errors.Wrap(ErrCreateEntity, ErrPubKeyType)
+	}
+
+	// Parse the TTL if provided, otherwise use the default certValidityPeriod.
+	validity := certValidityPeriod
+	if ttl != "" {
+		validity, err = time.ParseDuration(ttl)
+		if err != nil {
+			return Cert{}, errors.Wrap(ErrMalformedEntity, err)
+		}
+	}
+
+	var ipArray []net.IP
+	ipArray = append(ipArray, s.intermediateCA.Certificate.IPAddresses...)
+	ipArray = append(ipArray, options.IpAddresses...)
+	for _, ip := range ipAddrs {
+		parsedIP := net.ParseIP(ip)
+		if parsedIP == nil {
+			return Cert{}, errors.Wrap(ErrMalformedEntity, ErrInvalidIP)
+		}
+		ipArray = append(ipArray, parsedIP)
+	}
+
+	template := x509.Certificate{
+		SerialNumber:          serialNumber,
+		Subject:               subject,
+		NotBefore:             time.Now().UTC(),
+		NotAfter:              time.Now().UTC().Add(validity),
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		IsCA:                  false,
+		DNSNames:              append(s.intermediateCA.Certificate.DNSNames, options.DnsNames...),
+		IPAddresses:           ipArray,
+		ExtraExtensions:       exts,
+	}
+
+	var privKeyBytes []byte
+	var privKeyType string
+
+	if privKey != nil {
+		switch key := privKey.(type) {
+		case *rsa.PrivateKey:
+			privKeyBytes = x509.MarshalPKCS1PrivateKey(key)
+			privKeyType = RSAPrivateKey
+		case *ecdsa.PrivateKey:
+			privKeyBytes, err = x509.MarshalPKCS8PrivateKey(key)
+			privKeyType = ECPrivateKey
+		case ed25519.PrivateKey:
+			privKeyBytes, err = x509.MarshalPKCS8PrivateKey(key)
+			privKeyType = PrivateKey
+		}
+
+		if err != nil {
+			return Cert{}, err
+		}
+	}
+
+	certBytes, err := x509.CreateCertificate(rand.Reader, &template, s.intermediateCA.Certificate, pubKey, s.intermediateCA.PrivateKey)
+	if err != nil {
+		return Cert{}, err
+	}
+
+	dbCert := Cert{
+		SerialNumber: template.SerialNumber.String(),
+		EntityID:     entityID,
+		ExpiryTime:   template.NotAfter,
+		Type:         ClientCert,
+		Certificate:  string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certBytes})),
+	}
+
+	if privKeyBytes != nil {
+		dbCert.Key = string(pem.EncodeToMemory(&pem.Block{Type: privKeyType, Bytes: privKeyBytes}))
+	}
+
+	if err = s.certsRepo.CreateCert(ctx, dbCert); err != nil {
+		return Cert{}, errors.Wrap(ErrCreateEntity, err)
+	}
+
+	return Cert{
+		Certificate:  dbCert.Certificate,
+		SerialNumber: dbCert.SerialNumber,
+		EntityID:     dbCert.EntityID,
+		ExpiryTime:   dbCert.ExpiryTime,
+		Revoked:      dbCert.Revoked,
+		Type:         dbCert.Type,
+	}, nil
+}
+
 func (s *certsService) RevokeCerts(ctx context.Context, entityID string) error {
 	return s.certsRepo.RevokeCertsByEntityID(ctx, entityID)
 }
 
-func (s *certsService) getConcatCAs(ctx context.Context) (Certificate, error) {
+func (s *certsService) getConcatCAs(ctx context.Context) (Cert, error) {
 	intermediateCert, err := s.certsRepo.RetrieveCert(ctx, s.intermediateCA.SerialNumber)
 	if err != nil {
 		return Cert{}, errors.Wrap(ErrViewEntity, err)
@@ -468,7 +562,7 @@ func (s *certsService) getConcatCAs(ctx context.Context) (Certificate, error) {
 
 	concat := string(intermediateCert.Certificate) + string(rootCert.Certificate)
 	return Cert{
-		Certificate: []byte(concat),
+		Certificate: concat,
 		ExpiryTime:  intermediateCert.ExpiryTime,
 	}, nil
 }
@@ -484,7 +578,7 @@ func (s *certsService) generateRootCA(ctx context.Context, config Config) (*CA, 
 		return nil, err
 	}
 
-	certTemplate := &x509.Cert{
+	certTemplate := &x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
 			CommonName:         config.CommonName,
@@ -537,8 +631,8 @@ func (s *certsService) generateRootCA(ctx context.Context, config Config) (*CA, 
 
 func (s *certsService) saveCA(ctx context.Context, cert *x509.Certificate, privateKey *rsa.PrivateKey, CertType CertType) error {
 	dbCert := Cert{
-		Key:          pem.EncodeToMemory(&pem.Block{Type: RSAPrivateKey, Bytes: x509.MarshalPKCS1PrivateKey(privateKey)}),
-		Certificate:  pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw}),
+		Key:          string(pem.EncodeToMemory(&pem.Block{Type: RSAPrivateKey, Bytes: x509.MarshalPKCS1PrivateKey(privateKey)})),
+		Certificate:  string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw})),
 		SerialNumber: cert.SerialNumber.String(),
 		ExpiryTime:   cert.NotAfter,
 		Type:         CertType,
@@ -560,7 +654,7 @@ func (s *certsService) createIntermediateCA(ctx context.Context, rootCA *CA, con
 		return nil, err
 	}
 
-	template := x509.Cert{
+	template := x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
 			CommonName:         config.CommonName,
@@ -651,7 +745,7 @@ func (s *certsService) rotateCA(ctx context.Context, ctype CertType, config *Con
 			return err
 		}
 		for _, cert := range certificates {
-			if err := s.RevokeCert(ctx, cert.SerialNumber); err != nil {
+			if _, err := s.RevokeBySerial(ctx, cert.SerialNumber); err != nil {
 				return err
 			}
 		}
@@ -672,7 +766,7 @@ func (s *certsService) rotateCA(ctx context.Context, ctype CertType, config *Con
 			return err
 		}
 		for _, cert := range certificates {
-			if err := s.RevokeCert(ctx, cert.SerialNumber); err != nil {
+			if _, err := s.RevokeBySerial(ctx, cert.SerialNumber); err != nil {
 				return err
 			}
 		}
@@ -724,7 +818,7 @@ func (s *certsService) loadCACerts(ctx context.Context) error {
 
 	for _, c := range certificates {
 		if c.Type == RootCA {
-			rblock, _ := pem.Decode(c.Certificate)
+			rblock, _ := pem.Decode([]byte(c.Certificate))
 			if rblock == nil {
 				return errors.New("failed to parse certificate PEM")
 			}
@@ -733,7 +827,7 @@ func (s *certsService) loadCACerts(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
-			rkey, _ := pem.Decode(c.Key)
+			rkey, _ := pem.Decode([]byte(c.Key))
 			if rkey == nil {
 				return ErrFailedParse
 			}
@@ -749,7 +843,7 @@ func (s *certsService) loadCACerts(ctx context.Context) error {
 			}
 		}
 
-		iblock, _ := pem.Decode(c.Certificate)
+		iblock, _ := pem.Decode([]byte(c.Certificate))
 		if iblock == nil {
 			return errors.New("failed to parse certificate PEM")
 		}
@@ -758,7 +852,7 @@ func (s *certsService) loadCACerts(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
-			ikey, _ := pem.Decode(c.Key)
+			ikey, _ := pem.Decode([]byte(c.Key))
 			if ikey == nil {
 				return ErrFailedParse
 			}
@@ -775,4 +869,33 @@ func (s *certsService) loadCACerts(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+func (s *certsService) RemoveCert(ctx context.Context, entityId string) error {
+	return s.certsRepo.RemoveCert(ctx, entityId)
+}
+
+// RetrieveCert retrieves a certificate with the specified serial number.
+// It requires a valid authentication token to be provided.
+// If the token is invalid or expired, an error is returned.
+// The function returns the retrieved certificate and any error encountered.
+func (s *certsService) RetrieveCert(ctx context.Context, token, serialNumber string) (Cert, []byte, error) {
+	if _, err := jwt.ParseWithClaims(token, &jwt.RegisteredClaims{
+		Issuer:  Organization,
+		Subject: "certs",
+	}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(serialNumber), nil
+	}); err != nil {
+		return Cert{}, []byte{}, errors.Wrap(err, ErrMalformedEntity)
+	}
+	cert, err := s.certsRepo.RetrieveCert(ctx, serialNumber)
+	if err != nil {
+		return Cert{}, []byte{}, errors.Wrap(ErrViewEntity, err)
+	}
+	concat, err := s.getConcatCAs(ctx)
+	if err != nil {
+		return Cert{}, []byte{}, errors.Wrap(ErrViewEntity, err)
+	}
+
+	return cert, []byte(concat.Certificate), nil
 }

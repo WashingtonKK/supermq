@@ -7,7 +7,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/absmach/supermq/certs"
@@ -18,217 +17,301 @@ import (
 
 var _ certs.Repository = (*certsRepository)(nil)
 
-type PageMetadata struct {
-	Offset   uint64 `db:"offset,omitempty"`
-	Limit    uint64 `db:"limit,omitempty"`
-	ClientID string `db:"client_id,omitempty"`
-}
-
 type certsRepository struct {
 	db postgres.Database
 }
 
-// NewRepository instantiates a PostgreSQL implementation of certs
-// repository.
 func NewRepository(db postgres.Database) certs.Repository {
 	return &certsRepository{db: db}
 }
 
 func (cr certsRepository) RetrieveAll(ctx context.Context, offset, limit uint64) (certs.CertPage, error) {
-	pm := certs.PageMetadata{
-		Offset: offset,
-		Limit:  limit,
-	}
-
-	return cr.retrieveCertificates(ctx, "", pm)
+	pm := certs.PageMetadata{Offset: offset, Limit: limit}
+	return cr.ListCerts(ctx, pm)
 }
 
-func (cr certsRepository) RetrieveByClient(ctx context.Context, clientID string, pm certs.PageMetadata) (certs.CertPage, error) {
-	return cr.retrieveCertificates(ctx, clientID, pm)
+func (cr certsRepository) RetrieveByClient(ctx context.Context, entityID string, pm certs.PageMetadata) (certs.CertPage, error) {
+	pm.EntityID = entityID
+	return cr.ListCerts(ctx, pm)
 }
 
 func (cr certsRepository) Save(ctx context.Context, cert certs.Cert) (string, error) {
-	dbcrt := toDBCert(cert)
-
-	q := `INSERT INTO certs (client_id, serial_number, expiry_time, revoked) 
-	VALUES (:client_id, :serial_number, :expiry_time, :revoked)
-	RETURNING serial_number`
-
-	row, err := cr.db.NamedQueryContext(ctx, q, dbcrt)
-	if err != nil {
-		return "", postgres.HandleError(repoerr.ErrCreateEntity, err)
+	if err := cr.CreateCert(ctx, cert); err != nil {
+		return "", err
 	}
-	defer row.Close()
-
-	var serialNumber string
-	if row.Next() {
-		if err := row.Scan(&serialNumber); err != nil {
-			return "", errors.Wrap(repoerr.ErrFailedOpDB, err)
-		}
-	}
-
-	return serialNumber, nil
+	return cert.SerialNumber, nil
 }
 
 func (cr certsRepository) Update(ctx context.Context, cert certs.Cert) error {
-	dbcrt := toDBCert(cert)
-
-	q := `UPDATE certs SET 
-		client_id = :client_id,
-		expiry_time = :expiry_time,
-		revoked = :revoked
-		WHERE serial_number = :serial_number`
-
-	result, err := cr.db.NamedExecContext(ctx, q, dbcrt)
-	if err != nil {
-		return postgres.HandleError(repoerr.ErrUpdateEntity, err)
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return errors.Wrap(repoerr.ErrFailedOpDB, err)
-	}
-
-	if rowsAffected == 0 {
-		return errors.Wrap(repoerr.ErrNotFound, errors.New("certificate not found"))
-	}
-
-	return nil
+	return cr.UpdateCert(ctx, cert)
 }
 
-func (cr certsRepository) Remove(ctx context.Context, clientID string) error {
-	q := `DELETE FROM certs WHERE client_id = :client_id`
-	var c certs.Cert
-	c.ClientID = clientID
-	dbcrt := toDBCert(c)
-	if _, err := cr.db.NamedExecContext(ctx, q, dbcrt); err != nil {
-		return errors.Wrap(repoerr.ErrRemoveEntity, err)
-	}
-	return nil
+func (cr certsRepository) Remove(ctx context.Context, entityID string) error {
+	return cr.RemoveCert(ctx, entityID)
 }
 
 func (cr certsRepository) RemoveBySerial(ctx context.Context, serialID string) error {
 	q := `DELETE FROM certs WHERE serial_number = :serial_number`
-	var c certs.Cert
-	c.SerialNumber = serialID
-	dbcrt := toDBCert(c)
-	if _, err := cr.db.NamedExecContext(ctx, q, dbcrt); err != nil {
+	p := map[string]any{"serial_number": serialID}
+	if _, err := cr.db.NamedExecContext(ctx, q, p); err != nil {
 		return errors.Wrap(repoerr.ErrRemoveEntity, err)
 	}
 	return nil
 }
 
-func PageQuery(pm certs.PageMetadata) (string, error) {
-	var query []string
+func (cr certsRepository) RetrieveBySerial(ctx context.Context, serial string) (certs.Cert, error) {
+	return cr.RetrieveCert(ctx, serial)
+}
 
-	if pm.Revoked != "all" {
-		switch pm.Revoked {
-		case "true":
-			query = append(query, "revoked = true")
-		case "false":
-			query = append(query, "revoked = false")
+func (repo certsRepository) CreateCert(ctx context.Context, cert certs.Cert) error {
+	q := `
+		INSERT INTO certs (serial_number, certificate, key, entity_id, revoked, expiry_time, type)
+		VALUES (:serial_number, :certificate, :key, :entity_id, :revoked, :expiry_time, :type)`
+	_, err := repo.db.NamedExecContext(ctx, q, toDBCert(cert))
+	if err != nil {
+		return postgres.HandleError(certs.ErrCreateEntity, err)
+	}
+	return nil
+}
+
+func (repo certsRepository) RetrieveCert(ctx context.Context, serialNumber string) (certs.Cert, error) {
+	q := `
+		SELECT serial_number, certificate, key, entity_id, revoked, expiry_time, type
+		FROM certs WHERE serial_number = $1`
+	var dbc dbCert
+	if err := repo.db.QueryRowxContext(ctx, q, serialNumber).StructScan(&dbc); err != nil {
+		if err == sql.ErrNoRows {
+			return certs.Cert{}, errors.Wrap(certs.ErrNotFound, err)
+		}
+		return certs.Cert{}, errors.Wrap(certs.ErrViewEntity, err)
+	}
+	return toCert(dbc)
+}
+
+func (repo certsRepository) GetCAs(ctx context.Context, caType ...certs.CertType) ([]certs.Cert, error) {
+	q := `SELECT serial_number, key, certificate, expiry_time, revoked, type FROM certs WHERE type = ANY($1)`
+
+	var types []string
+	if len(caType) == 0 {
+		types = []string{certs.RootCA.String(), certs.IntermediateCA.String()}
+	} else {
+		types = make([]string, len(caType))
+		for i, t := range caType {
+			types[i] = t.String()
 		}
 	}
 
-	if pm.CommonName != "" {
-		query = append(query, "client_id ILIKE '%' || :client_id || '%'")
-	}
-
-	var emq string
-	if len(query) > 0 {
-		emq = fmt.Sprintf("WHERE %s", strings.Join(query, " AND "))
-	}
-	return emq, nil
-}
-
-func (cr certsRepository) retrieveCertificates(ctx context.Context, clientID string, pm certs.PageMetadata) (certs.CertPage, error) {
-	pageQuery, err := PageQuery(pm)
+	rows, err := repo.db.QueryContext(ctx, q, types)
 	if err != nil {
-		return certs.CertPage{}, err
-	}
-
-	q := fmt.Sprintf(`SELECT client_id, serial_number, expiry_time, revoked FROM certs %s`,
-		pageQuery)
-
-	q = applyLimitOffset(q)
-
-	param := PageMetadata{
-		Offset:   pm.Offset,
-		Limit:    pm.Limit,
-		ClientID: clientID,
-	}
-
-	rows, err := cr.db.NamedQueryContext(ctx, q, param)
-	if err != nil {
-		return certs.CertPage{}, err
+		return nil, postgres.HandleError(certs.ErrViewEntity, err)
 	}
 	defer rows.Close()
 
-	certificates := []certs.Cert{}
+	var out []certs.Cert
 	for rows.Next() {
-		c := certs.Cert{}
-		if err := rows.Scan(&c.ClientID, &c.SerialNumber, &c.ExpiryTime, &c.Revoked); err != nil {
-			return certs.CertPage{}, err
+		var (
+			serial string
+			key    sql.NullString
+			certB  sql.NullString
+			exp    sql.NullTime
+			rev    sql.NullBool
+			tStr   sql.NullString
+		)
+		if err := rows.Scan(&serial, &key, &certB, &exp, &rev, &tStr); err != nil {
+			return nil, errors.Wrap(certs.ErrViewEntity, err)
 		}
-		certificates = append(certificates, c)
+		c := certs.Cert{
+			SerialNumber: serial,
+			Key:          key.String,
+			Certificate:  certB.String,
+			Revoked:      rev.Valid && rev.Bool,
+		}
+		if exp.Valid {
+			c.ExpiryTime = exp.Time
+		}
+		if tStr.Valid {
+			if tt, err := certs.CertTypeFromString(tStr.String); err == nil {
+				c.Type = tt
+			}
+		}
+		out = append(out, c)
 	}
-
-	cq := fmt.Sprintf(`SELECT COUNT(*) AS total_count
-			FROM certs %s`, pageQuery)
-
-	total, err := postgres.Total(ctx, cr.db, cq, param)
-	if err != nil {
-		return certs.CertPage{}, errors.Wrap(repoerr.ErrFailedOpDB, err)
+	if err := rows.Err(); err != nil {
+		return nil, errors.Wrap(certs.ErrViewEntity, err)
 	}
-
-	return certs.CertPage{
-		Total:        total,
-		Limit:        pm.Limit,
-		Offset:       pm.Offset,
-		Certificates: certificates,
-	}, nil
+	return out, nil
 }
 
-func (cr certsRepository) RetrieveBySerial(ctx context.Context, serial string) (certs.Cert, error) {
-	q := `SELECT client_id, serial_number, expiry_time, revoked FROM certs WHERE serial_number = $1`
-	var dbcrt dbCert
-	var c certs.Cert
-
-	if err := cr.db.QueryRowxContext(ctx, q, serial).StructScan(&dbcrt); err != nil {
-		if err == sql.ErrNoRows {
-			return c, errors.Wrap(repoerr.ErrNotFound, err)
-		}
-
-		return c, errors.Wrap(repoerr.ErrViewEntity, err)
+func (repo certsRepository) UpdateCert(ctx context.Context, cert certs.Cert) error {
+	q := `
+		UPDATE certs
+		SET certificate = :certificate,
+		    key         = :key,
+		    revoked     = :revoked,
+		    expiry_time = :expiry_time
+		WHERE serial_number = :serial_number`
+	res, err := repo.db.NamedExecContext(ctx, q, toDBCert(cert))
+	if err != nil {
+		return postgres.HandleError(certs.ErrUpdateEntity, err)
 	}
-	c = toCert(dbcrt)
+	n, err := res.RowsAffected()
+	if err != nil {
+		return errors.Wrap(certs.ErrUpdateEntity, err)
+	}
+	if n == 0 {
+		return certs.ErrNotFound
+	}
+	return nil
+}
 
-	return c, nil
+func (repo certsRepository) ListCerts(ctx context.Context, pm certs.PageMetadata) (certs.CertPage, error) {
+	base := `SELECT serial_number, revoked, expiry_time, entity_id FROM certs`
+	var cond string
+	if pm.EntityID != "" {
+		cond = fmt.Sprintf(`WHERE entity_id = :entity_id AND type = '%s'`, certs.ClientCert.String())
+	} else {
+		cond = fmt.Sprintf(`WHERE type = '%s'`, certs.ClientCert.String())
+	}
+	q := fmt.Sprintf(`%s %s LIMIT :limit OFFSET :offset`, base, cond)
+
+	params := map[string]any{
+		"limit":     pm.Limit,
+		"offset":    pm.Offset,
+		"entity_id": pm.EntityID,
+	}
+
+	rows, err := repo.db.NamedQueryContext(ctx, q, params)
+	if err != nil {
+		return certs.CertPage{}, postgres.HandleError(certs.ErrViewEntity, err)
+	}
+	defer rows.Close()
+
+	var certsOut []certs.Cert
+	for rows.Next() {
+		var d dbCert
+		if err := rows.StructScan(&d); err != nil {
+			return certs.CertPage{}, errors.Wrap(certs.ErrViewEntity, err)
+		}
+		c, _ := toCert(d)
+		certsOut = append(certsOut, c)
+	}
+	if err := rows.Err(); err != nil {
+		return certs.CertPage{}, errors.Wrap(certs.ErrViewEntity, err)
+	}
+
+	countQ := fmt.Sprintf(`SELECT COUNT(*) FROM certs %s`, cond)
+	total, err := postgres.Total(ctx, repo.db, countQ, params)
+	if err != nil {
+		return certs.CertPage{}, errors.Wrap(certs.ErrViewEntity, err)
+	}
+	pm.Total = total
+	return certs.CertPage{PageMetadata: pm, Certificates: certsOut}, nil
+}
+
+func (repo certsRepository) ListRevokedCerts(ctx context.Context) ([]certs.Cert, error) {
+	q := `
+		SELECT serial_number, entity_id, expiry_time
+		FROM certs
+		WHERE revoked = true`
+	rows, err := repo.db.QueryContext(ctx, q)
+	if err != nil {
+		return nil, postgres.HandleError(certs.ErrViewEntity, err)
+	}
+	defer rows.Close()
+
+	var out []certs.Cert
+	for rows.Next() {
+		var serial string
+		var entityID sql.NullString
+		var exp sql.NullTime
+		var c certs.Cert
+		if err := rows.Scan(&serial, &entityID, &exp); err != nil {
+			return nil, postgres.HandleError(certs.ErrViewEntity, err)
+		}
+		c.SerialNumber = serial
+		c.EntityID = entityID.String
+		if exp.Valid {
+			c.ExpiryTime = exp.Time
+		}
+		out = append(out, c)
+	}
+	return out, nil
+}
+
+func (repo certsRepository) RemoveCert(ctx context.Context, entityID string) error {
+	q := `DELETE FROM certs WHERE entity_id = $1`
+	result, err := repo.db.ExecContext(ctx, q, entityID)
+	if err != nil {
+		return errors.Wrap(certs.ErrViewEntity, err)
+	}
+	if rows, _ := result.RowsAffected(); rows == 0 {
+		return certs.ErrNotFound
+	}
+	return nil
+}
+
+func (repo certsRepository) RevokeCertsByEntityID(ctx context.Context, entityID string) error {
+	q := `UPDATE certs SET revoked = true, expiry_time = $1 WHERE entity_id = $2`
+	result, err := repo.db.ExecContext(ctx, q, time.Now().UTC(), entityID)
+	if err != nil {
+		return errors.Wrap(certs.ErrUpdateEntity, err)
+	}
+	ra, err := result.RowsAffected()
+	if err != nil {
+		return errors.Wrap(certs.ErrUpdateEntity, err)
+	}
+	if ra == 0 {
+		return certs.ErrNotFound
+	}
+	return nil
 }
 
 type dbCert struct {
-	ClientID     string    `db:"client_id"`
-	SerialNumber string    `db:"serial_number"`
-	ExpiryTime   time.Time `db:"expiry_time"`
-	Revoked      bool      `db:"revoked"`
+	SerialNumber string         `db:"serial_number"`
+	Certificate  sql.NullString `db:"certificate"`
+	Key          sql.NullString `db:"key"`
+	EntityID     sql.NullString `db:"entity_id"`
+	Revoked      sql.NullBool   `db:"revoked"`
+	ExpiryTime   sql.NullTime   `db:"expiry_time"`
+	Type         sql.NullString `db:"type"`
 }
 
 func toDBCert(c certs.Cert) dbCert {
+	var tStr string
+	if c.Type.String() != "" {
+		tStr = c.Type.String()
+	}
+	var expNT sql.NullTime
+	if !c.ExpiryTime.IsZero() {
+		expNT = sql.NullTime{Time: c.ExpiryTime, Valid: true}
+	}
 	return dbCert{
-		ClientID:     c.ClientID,
 		SerialNumber: c.SerialNumber,
-		ExpiryTime:   c.ExpiryTime,
-		Revoked:      c.Revoked,
+		Certificate:  sql.NullString{String: c.Certificate, Valid: c.Certificate != ""},
+		Key:          sql.NullString{String: c.Key, Valid: c.Key != ""},
+		EntityID:     sql.NullString{String: c.EntityID, Valid: c.EntityID != ""},
+		Revoked:      sql.NullBool{Bool: c.Revoked, Valid: true},
+		ExpiryTime:   expNT,
+		Type:         sql.NullString{String: tStr, Valid: tStr != ""},
 	}
 }
 
-func toCert(cdb dbCert) certs.Cert {
+func toCert(d dbCert) (certs.Cert, error) {
 	var c certs.Cert
-	c.ClientID = cdb.ClientID
-	c.SerialNumber = cdb.SerialNumber
-	c.ExpiryTime = cdb.ExpiryTime
-	c.Revoked = cdb.Revoked
-	return c
+	c.SerialNumber = d.SerialNumber
+	c.Certificate = d.Certificate.String
+	c.Key = d.Key.String
+	c.EntityID = d.EntityID.String
+	c.Revoked = d.Revoked.Valid && d.Revoked.Bool
+	if d.ExpiryTime.Valid {
+		c.ExpiryTime = d.ExpiryTime.Time
+	}
+	if d.Type.Valid {
+		if tt, err := certs.CertTypeFromString(d.Type.String); err == nil {
+			c.Type = tt
+		}
+	}
+	return c, nil
 }
 
 func applyLimitOffset(query string) string {
