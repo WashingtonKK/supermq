@@ -5,12 +5,11 @@ package grpcclient
 
 import (
 	"crypto/tls"
-	"crypto/x509"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/absmach/supermq/pkg/errors"
+	"github.com/absmach/supermq/pkg/server"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -112,22 +111,18 @@ func connect(cfg Config) (*grpc.ClientConn, security, error) {
 		tlsConfig := &tls.Config{}
 
 		// Loading root ca certificates file
-		rootCA, err := os.ReadFile(cfg.ServerCAFile)
+		rootCA, err := server.LoadRootCACerts(cfg.ServerCAFile)
 		if err != nil {
-			return nil, secure, fmt.Errorf("failed to load root ca file: %w", err)
+			return nil, secure, fmt.Errorf("failed to load root ca: %w", err)
 		}
-		if len(rootCA) > 0 {
-			capool := x509.NewCertPool()
-			if !capool.AppendCertsFromPEM(rootCA) {
-				return nil, secure, fmt.Errorf("failed to append root ca to tls.Config")
-			}
-			tlsConfig.RootCAs = capool
+		if rootCA != nil {
+			tlsConfig.RootCAs = rootCA
 			secure = withTLS
 		}
 
 		// Loading mtls certificates file
 		if cfg.ClientCert != "" || cfg.ClientKey != "" {
-			certificate, err := tls.LoadX509KeyPair(cfg.ClientCert, cfg.ClientKey)
+			certificate, err := server.LoadX509KeyPair(cfg.ClientCert, cfg.ClientKey)
 			if err != nil {
 				return nil, secure, fmt.Errorf("failed to client certificate and key %w", err)
 			}

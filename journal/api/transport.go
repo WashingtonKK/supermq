@@ -8,7 +8,6 @@ import (
 	"log/slog"
 	"math"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/absmach/supermq"
@@ -86,10 +85,6 @@ func decodeRetrieveEntityJournalReq(_ context.Context, r *http.Request) (interfa
 	}
 	page.EntityID = chi.URLParam(r, "entityID")
 	page.EntityType = entityType
-
-	if entityType == journal.ChannelEntity {
-		page.Operation = strings.ReplaceAll(page.Operation, "channel", "group")
-	}
 
 	req := retrieveJournalsReq{
 		token: apiutil.ExtractBearerToken(r),

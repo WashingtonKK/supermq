@@ -2459,47 +2459,46 @@ func (_c *Service_UpdateRoleName_Call) RunAndReturn(run func(ctx context.Context
 	return _c
 }
 
-// ViewInvitation provides a mock function for the type Service
-func (_mock *Service) ViewInvitation(ctx context.Context, session authn.Session, inviteeUserID string, domainID string) (domains.Invitation, error) {
-	ret := _mock.Called(ctx, session, inviteeUserID, domainID)
+// ViewDomainInvitation provides a mock function for the type Service
+func (_mock *Service) ViewDomainInvitation(ctx context.Context, session authn.Session, inviteeUserID string) (domains.Invitation, error) {
+	ret := _mock.Called(ctx, session, inviteeUserID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for ViewInvitation")
+		panic("no return value specified for ViewDomainInvitation")
 	}
 
 	var r0 domains.Invitation
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, authn.Session, string, string) (domains.Invitation, error)); ok {
-		return returnFunc(ctx, session, inviteeUserID, domainID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, authn.Session, string) (domains.Invitation, error)); ok {
+		return returnFunc(ctx, session, inviteeUserID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, authn.Session, string, string) domains.Invitation); ok {
-		r0 = returnFunc(ctx, session, inviteeUserID, domainID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, authn.Session, string) domains.Invitation); ok {
+		r0 = returnFunc(ctx, session, inviteeUserID)
 	} else {
 		r0 = ret.Get(0).(domains.Invitation)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, authn.Session, string, string) error); ok {
-		r1 = returnFunc(ctx, session, inviteeUserID, domainID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, authn.Session, string) error); ok {
+		r1 = returnFunc(ctx, session, inviteeUserID)
 	} else {
 		r1 = ret.Error(1)
 	}
 	return r0, r1
 }
 
-// Service_ViewInvitation_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ViewInvitation'
-type Service_ViewInvitation_Call struct {
+// Service_ViewDomainInvitation_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ViewDomainInvitation'
+type Service_ViewDomainInvitation_Call struct {
 	*mock.Call
 }
 
-// ViewInvitation is a helper method to define mock.On call
+// ViewDomainInvitation is a helper method to define mock.On call
 //   - ctx context.Context
 //   - session authn.Session
 //   - inviteeUserID string
-//   - domainID string
-func (_e *Service_Expecter) ViewInvitation(ctx interface{}, session interface{}, inviteeUserID interface{}, domainID interface{}) *Service_ViewInvitation_Call {
-	return &Service_ViewInvitation_Call{Call: _e.mock.On("ViewInvitation", ctx, session, inviteeUserID, domainID)}
+func (_e *Service_Expecter) ViewDomainInvitation(ctx interface{}, session interface{}, inviteeUserID interface{}) *Service_ViewDomainInvitation_Call {
+	return &Service_ViewDomainInvitation_Call{Call: _e.mock.On("ViewDomainInvitation", ctx, session, inviteeUserID)}
 }
 
-func (_c *Service_ViewInvitation_Call) Run(run func(ctx context.Context, session authn.Session, inviteeUserID string, domainID string)) *Service_ViewInvitation_Call {
+func (_c *Service_ViewDomainInvitation_Call) Run(run func(ctx context.Context, session authn.Session, inviteeUserID string)) *Service_ViewDomainInvitation_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -2513,26 +2512,21 @@ func (_c *Service_ViewInvitation_Call) Run(run func(ctx context.Context, session
 		if args[2] != nil {
 			arg2 = args[2].(string)
 		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
 		run(
 			arg0,
 			arg1,
 			arg2,
-			arg3,
 		)
 	})
 	return _c
 }
 
-func (_c *Service_ViewInvitation_Call) Return(invitation domains.Invitation, err error) *Service_ViewInvitation_Call {
+func (_c *Service_ViewDomainInvitation_Call) Return(invitation domains.Invitation, err error) *Service_ViewDomainInvitation_Call {
 	_c.Call.Return(invitation, err)
 	return _c
 }
 
-func (_c *Service_ViewInvitation_Call) RunAndReturn(run func(ctx context.Context, session authn.Session, inviteeUserID string, domainID string) (domains.Invitation, error)) *Service_ViewInvitation_Call {
+func (_c *Service_ViewDomainInvitation_Call) RunAndReturn(run func(ctx context.Context, session authn.Session, inviteeUserID string) (domains.Invitation, error)) *Service_ViewDomainInvitation_Call {
 	_c.Call.Return(run)
 	return _c
 }

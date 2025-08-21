@@ -4,6 +4,8 @@ package server
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"log/slog"
 	"os"
@@ -87,4 +89,41 @@ func StopSignalHandler(ctx context.Context, cancel context.CancelFunc, logger *s
 	case <-ctx.Done():
 		return nil
 	}
+}
+
+func ReadFileOrData(input string) ([]byte, error) {
+	if _, err := os.Stat(input); err == nil {
+		return os.ReadFile(input)
+	}
+	return []byte(input), nil
+}
+
+func LoadX509KeyPair(certFile, keyFile string) (tls.Certificate, error) {
+	cert, err := ReadFileOrData(certFile)
+	if err != nil {
+		return tls.Certificate{}, fmt.Errorf("failed to read cert: %v", err)
+	}
+
+	key, err := ReadFileOrData(keyFile)
+	if err != nil {
+		return tls.Certificate{}, fmt.Errorf("failed to read key: %v", err)
+	}
+
+	return tls.X509KeyPair(cert, key)
+}
+
+func LoadRootCACerts(input string) (*x509.CertPool, error) {
+	pemData, err := ReadFileOrData(input)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load root CA data: %w", err)
+	}
+
+	if len(pemData) > 0 {
+		capool := x509.NewCertPool()
+		if !capool.AppendCertsFromPEM(pemData) {
+			return nil, fmt.Errorf("failed to append root ca to tls.Config")
+		}
+		return capool, nil
+	}
+	return nil, nil
 }

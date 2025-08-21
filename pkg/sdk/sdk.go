@@ -1326,6 +1326,16 @@ type SDK interface {
 	//  journals, _ := sdk.Journal("client", "clientID","domainID", PageMetadata{Offset: 0, Limit: 10, Operation: "client.create"}, "token")
 	//  fmt.Println(journals)
 	Journal(ctx context.Context, entityType, entityID, domainID string, pm PageMetadata, token string) (journal JournalsPage, err error)
+
+	// DomainInvitations returns a list of invitations for a specific domain.
+	// For example:
+	//  pm := sdk.PageMetadata{
+	//    Offset: 0,
+	//    Limit:  10,
+	//  }
+	//  invitations, _ := sdk.DomainInvitations("domainID", pm, "token")
+	//  fmt.Println(invitations)
+	DomainInvitations(ctx context.Context, pm PageMetadata, token, domainID string) (invitations InvitationPage, err error)
 }
 
 type mgSDK struct {
@@ -1391,7 +1401,7 @@ func NewSDK(conf Config) SDK {
 // It then returns the response headers, the response body, and the associated error(s) (if any).
 func (sdk mgSDK) processRequest(ctx context.Context, method, reqUrl, token string, data []byte, headers map[string]string, expectedRespCodes ...int) (http.Header, []byte, errors.SDKError) {
 	if sdk.roles {
-		reqUrl = reqUrl + fmt.Sprintf("?roles=%v", true)
+		reqUrl = fmt.Sprintf("%s?roles=%v", reqUrl, true)
 	}
 	req, err := http.NewRequestWithContext(ctx, method, reqUrl, bytes.NewReader(data))
 	if err != nil {
@@ -1408,7 +1418,7 @@ func (sdk mgSDK) processRequest(ctx context.Context, method, reqUrl, token strin
 
 	if token != "" {
 		if !strings.Contains(token, ClientPrefix) {
-			token = BearerPrefix + token
+			token = fmt.Sprintf("%s%s", BearerPrefix, token)
 		}
 		req.Header.Set("Authorization", token)
 	}
@@ -1427,9 +1437,9 @@ func (sdk mgSDK) processRequest(ctx context.Context, method, reqUrl, token strin
 	}
 	defer resp.Body.Close()
 
-	sdkerr := errors.CheckError(resp, expectedRespCodes...)
-	if sdkerr != nil {
-		return make(http.Header), []byte{}, sdkerr
+	sdkErr := errors.CheckError(resp, expectedRespCodes...)
+	if sdkErr != nil {
+		return make(http.Header), []byte{}, sdkErr
 	}
 
 	body, err := io.ReadAll(resp.Body)

@@ -146,12 +146,12 @@ func (req *acceptInvitationReq) validate() error {
 	return nil
 }
 
-type invitationReq struct {
+type deleteInvitationReq struct {
 	userID   string
 	domainID string
 }
 
-func (req *invitationReq) validate() error {
+func (req *deleteInvitationReq) validate() error {
 	if req.userID == "" {
 		return apiutil.ErrMissingID
 	}

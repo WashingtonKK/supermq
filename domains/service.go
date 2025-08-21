@@ -224,25 +224,6 @@ func (svc *service) resendInvitation(ctx context.Context, invitation Invitation)
 	return nil
 }
 
-func (svc *service) ViewInvitation(ctx context.Context, session authn.Session, inviteeUserID, domainID string) (invitation Invitation, err error) {
-	inv, err := svc.repo.RetrieveInvitation(ctx, inviteeUserID, domainID)
-	if err != nil {
-		return Invitation{}, errors.Wrap(svcerr.ErrViewEntity, err)
-	}
-	role, err := svc.repo.RetrieveRole(ctx, inv.RoleID)
-	if err != nil {
-		return Invitation{}, errors.Wrap(svcerr.ErrViewEntity, err)
-	}
-	actions, err := svc.repo.RoleListActions(ctx, inv.RoleID)
-	if err != nil {
-		return Invitation{}, errors.Wrap(svcerr.ErrViewEntity, err)
-	}
-	inv.Actions = actions
-	inv.RoleName = role.Name
-
-	return inv, nil
-}
-
 func (svc *service) ListInvitations(ctx context.Context, session authn.Session, page InvitationPageMeta) (invitations InvitationPage, err error) {
 	page.InviteeUserID = session.UserID
 	ip, err := svc.repo.RetrieveAllInvitations(ctx, page)

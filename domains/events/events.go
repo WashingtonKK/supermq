@@ -27,7 +27,6 @@ const (
 	invitationReject     = invitationPrefix + "reject"
 	invitationList       = invitationPrefix + "list"
 	invitationListDomain = invitationPrefix + "list_domain"
-	invitationRetrieve   = invitationPrefix + "retrieve"
 	invitationDelete     = invitationPrefix + "delete"
 )
 
@@ -41,7 +40,6 @@ var (
 	_ events.Event = (*freezeDomainEvent)(nil)
 	_ events.Event = (*listDomainsEvent)(nil)
 	_ events.Event = (*sendInvitationEvent)(nil)
-	_ events.Event = (*viewInvitationEvent)(nil)
 	_ events.Event = (*listInvitationsEvent)(nil)
 	_ events.Event = (*listDomainInvitationsEvent)(nil)
 	_ events.Event = (*acceptInvitationEvent)(nil)
@@ -319,28 +317,6 @@ func (sie sendInvitationEvent) Encode() (map[string]interface{}, error) {
 		"role_id":         sie.invitation.RoleID,
 		"token_type":      sie.session.Type.String(),
 		"super_admin":     sie.session.SuperAdmin,
-	}
-
-	return val, nil
-}
-
-type viewInvitationEvent struct {
-	inviteeUserID string
-	domainID      string
-	roleID        string
-	roleName      string
-	session       authn.Session
-}
-
-func (vie viewInvitationEvent) Encode() (map[string]interface{}, error) {
-	val := map[string]interface{}{
-		"operation":       invitationRetrieve,
-		"invitee_user_id": vie.inviteeUserID,
-		"domain_id":       vie.domainID,
-		"role_id":         vie.roleID,
-		"role_name":       vie.roleName,
-		"token_type":      vie.session.Type.String(),
-		"super_admin":     vie.session.SuperAdmin,
 	}
 
 	return val, nil

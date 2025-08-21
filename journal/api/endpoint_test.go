@@ -12,10 +12,11 @@ import (
 	"testing"
 	"time"
 
+	api "github.com/absmach/supermq/api/http"
 	apiutil "github.com/absmach/supermq/api/http/util"
 	"github.com/absmach/supermq/internal/testsutil"
 	"github.com/absmach/supermq/journal"
-	"github.com/absmach/supermq/journal/api"
+	httpapi "github.com/absmach/supermq/journal/api"
 	"github.com/absmach/supermq/journal/mocks"
 	smqlog "github.com/absmach/supermq/logger"
 	smqauthn "github.com/absmach/supermq/pkg/authn"
@@ -25,7 +26,10 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-var validToken = "valid"
+var (
+	validToken = "valid"
+	validID    = testsutil.GenerateUUID(&testing.T{})
+)
 
 type testRequest struct {
 	client *http.Client
@@ -53,7 +57,7 @@ func newjournalServer() (*httptest.Server, *mocks.Service, *authnmocks.Authentic
 
 	logger := smqlog.NewMock()
 	authn := new(authnmocks.Authentication)
-	mux := api.MakeHandler(svc, authn, logger, "journal-log", "test")
+	mux := httpapi.MakeHandler(svc, authn, logger, "journal-log", "test")
 	return httptest.NewServer(mux), svc, authn
 }
 
@@ -292,6 +296,7 @@ func TestListEntityJournalsEndpoint(t *testing.T) {
 		domainID    string
 		url         string
 		contentType string
+		page        journal.Page
 		status      int
 		authnErr    error
 		svcErr      error
@@ -300,41 +305,109 @@ func TestListEntityJournalsEndpoint(t *testing.T) {
 			desc:     "with group type successful",
 			token:    validToken,
 			domainID: domainID,
-			url:      "/group/123",
-			status:   http.StatusOK,
-			svcErr:   nil,
+			url:      "/group/" + validID,
+			page: journal.Page{
+				EntityID:   validID,
+				EntityType: journal.GroupEntity,
+				Offset:     0,
+				Limit:      10,
+				Direction:  api.DescDir,
+			},
+			status: http.StatusOK,
+			svcErr: nil,
 		},
 		{
 			desc:     "with channel type successful",
 			token:    validToken,
 			domainID: domainID,
-			url:      "/channel/123",
-			status:   http.StatusOK,
-			svcErr:   nil,
+			url:      "/channel/" + validID,
+			page: journal.Page{
+				EntityID:   validID,
+				EntityType: journal.ChannelEntity,
+				Offset:     0,
+				Limit:      10,
+				Direction:  api.DescDir,
+			},
+			status: http.StatusOK,
+			svcErr: nil,
 		},
 		{
 			desc:     "with client type successful",
 			token:    validToken,
 			domainID: domainID,
-			url:      "/client/123",
-			status:   http.StatusOK,
-			svcErr:   nil,
+			url:      "/client/" + validID,
+			page: journal.Page{
+				EntityID:   validID,
+				EntityType: journal.ClientEntity,
+				Offset:     0,
+				Limit:      10,
+				Direction:  api.DescDir,
+			},
+			status: http.StatusOK,
+			svcErr: nil,
 		},
 		{
 			desc:     "with service error",
 			token:    validToken,
 			domainID: domainID,
-			url:      "/client/123",
-			status:   http.StatusForbidden,
-			svcErr:   svcerr.ErrAuthorization,
+			url:      "/client/" + validID,
+			page: journal.Page{
+				EntityID:   validID,
+				EntityType: journal.ClientEntity,
+				Offset:     0,
+				Limit:      10,
+				Direction:  api.DescDir,
+			},
+			status: http.StatusForbidden,
+			svcErr: svcerr.ErrAuthorization,
 		},
 		{
-			desc:     "with operation",
+			desc:     "with channel operation",
 			token:    validToken,
 			domainID: domainID,
-			url:      "/channel/123?operation=channel.create",
-			status:   http.StatusOK,
-			svcErr:   nil,
+			url:      "/channel/" + validID + "?operation=channel.create",
+			page: journal.Page{
+				EntityID:   validID,
+				EntityType: journal.ChannelEntity,
+				Offset:     0,
+				Limit:      10,
+				Direction:  api.DescDir,
+				Operation:  "channel.create",
+			},
+			status: http.StatusOK,
+			svcErr: nil,
+		},
+		{
+			desc:     "with group operation",
+			token:    validToken,
+			domainID: domainID,
+			url:      "/group/" + validID + "?operation=group.create",
+			page: journal.Page{
+				EntityID:   validID,
+				EntityType: journal.GroupEntity,
+				Offset:     0,
+				Limit:      10,
+				Direction:  api.DescDir,
+				Operation:  "group.create",
+			},
+			status: http.StatusOK,
+			svcErr: nil,
+		},
+		{
+			desc:     "with client operation",
+			token:    validToken,
+			domainID: domainID,
+			url:      "/client/" + validID + "?operation=client.create",
+			page: journal.Page{
+				EntityID:   validID,
+				EntityType: journal.ClientEntity,
+				Offset:     0,
+				Limit:      10,
+				Direction:  api.DescDir,
+				Operation:  "client.create",
+			},
+			status: http.StatusOK,
+			svcErr: nil,
 		},
 		{
 			desc:     "with malformed operation",
@@ -356,9 +429,21 @@ func TestListEntityJournalsEndpoint(t *testing.T) {
 			desc:     "with all query params",
 			token:    validToken,
 			domainID: domainID,
-			url:      "/group/123?offset=10&limit=10&operation=group.create&from=0&to=10&with_attributes=true&with_metadata=true&dir=asc",
-			status:   http.StatusOK,
-			svcErr:   nil,
+			url:      "/group/" + validID + "?offset=10&limit=10&operation=group.create&from=0&to=10&with_attributes=true&with_metadata=true&dir=asc",
+			page: journal.Page{
+				EntityID:       validID,
+				EntityType:     journal.GroupEntity,
+				Offset:         10,
+				Limit:          10,
+				Operation:      "group.create",
+				From:           time.Time{},
+				To:             time.Unix(10, 0),
+				WithAttributes: true,
+				WithMetadata:   true,
+				Direction:      api.AscDir,
+			},
+			status: http.StatusOK,
+			svcErr: nil,
 		},
 		{
 			desc:     " with empty token",
@@ -386,7 +471,7 @@ func TestListEntityJournalsEndpoint(t *testing.T) {
 				}
 			}
 			authCall := authn.On("Authenticate", mock.Anything, c.token).Return(c.session, c.authnErr)
-			svcCall := svc.On("RetrieveAll", mock.Anything, c.session, mock.Anything).Return(journal.JournalsPage{}, c.svcErr)
+			svcCall := svc.On("RetrieveAll", mock.Anything, c.session, c.page).Return(journal.JournalsPage{}, c.svcErr)
 			req := testRequest{
 				client: es.Client(),
 				method: http.MethodGet,

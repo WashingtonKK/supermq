@@ -5,6 +5,7 @@ package http
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -39,10 +40,23 @@ func (s *httpServer) Start() error {
 	s.Protocol = httpProtocol
 	switch {
 	case s.Config.CertFile != "" || s.Config.KeyFile != "":
+		certs, err := server.LoadX509KeyPair(s.Config.CertFile, s.Config.KeyFile)
+		if err != nil {
+			return err
+		}
+
+		if s.server.TLSConfig == nil {
+			s.server.TLSConfig = &tls.Config{}
+		}
+
+		tlsConf := s.server.TLSConfig.Clone()
+		tlsConf.Certificates = append(tlsConf.Certificates, certs)
+		s.server.TLSConfig = tlsConf
 		s.Protocol = httpsProtocol
-		s.Logger.Info(fmt.Sprintf("%s service %s server listening at %s with TLS cert %s and key %s", s.Name, s.Protocol, s.Address, s.Config.CertFile, s.Config.KeyFile))
+
+		s.Logger.Info(fmt.Sprintf("%s service %s server listening at %s with TLS", s.Name, s.Protocol, s.Address))
 		go func() {
-			errCh <- s.server.ListenAndServeTLS(s.Config.CertFile, s.Config.KeyFile)
+			errCh <- s.server.ListenAndServeTLS("", "")
 		}()
 	default:
 		s.Logger.Info(fmt.Sprintf("%s service %s server listening at %s without TLS", s.Name, s.Protocol, s.Address))
@@ -50,6 +64,7 @@ func (s *httpServer) Start() error {
 			errCh <- s.server.ListenAndServe()
 		}()
 	}
+
 	select {
 	case <-s.Ctx.Done():
 		return s.Stop()

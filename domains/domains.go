@@ -193,14 +193,6 @@ type Service interface {
 	// Only domain administrators and platform administrators can send invitations.
 	SendInvitation(ctx context.Context, session authn.Session, invitation Invitation) (err error)
 
-	// ViewInvitation returns an invitation.
-	// People who can view invitations are:
-	// - the invited user: they can view their own invitations
-	// - the user who sent the invitation
-	// - domain administrators
-	// - platform administrators
-	ViewInvitation(ctx context.Context, session authn.Session, inviteeUserID, domainID string) (invitation Invitation, err error)
-
 	// ListInvitations returns a list of invitations.
 	// By default, it will list invitations the current user has received.
 	ListInvitations(ctx context.Context, session authn.Session, page InvitationPageMeta) (invitations InvitationPage, err error)

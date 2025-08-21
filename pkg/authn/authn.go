@@ -5,6 +5,9 @@ package authn
 
 import (
 	"context"
+	"encoding/base64"
+	"errors"
+	"strings"
 )
 
 type TokenType uint32
@@ -47,4 +50,57 @@ type Session struct {
 // Authn is supermq authentication library.
 type Authentication interface {
 	Authenticate(ctx context.Context, token string) (Session, error)
+}
+
+const authSep = ":"
+
+type AuthPrefix int
+
+const (
+	Unknown AuthPrefix = iota
+	BasicAuth
+	DomainAuth
+)
+
+var authPrefixStrings = [3]string{
+	"Unknown",
+	"Basic",
+	"Domain",
+}
+
+// String returns the string representation (e.g., "Basic") of the AuthPrefix.
+func (a AuthPrefix) String() string {
+	if int(a) < len(authPrefixStrings) {
+		return authPrefixStrings[a]
+	}
+	return "Unknown"
+}
+
+// ErrNotEncoded acts similarly to EOF - it does indicate there is no suffix in
+// the token, but that does not have to be treated as the error in some cases.
+// If token is not base64-encoded, the token is returned as a key alongside with the error.
+var ErrNotEncoded = errors.New("token is not encoded with suffix")
+
+func AuthUnpack(token string) (AuthPrefix, string, string, error) {
+	var auth AuthPrefix
+	for i, pref := range authPrefixStrings {
+		if strings.HasPrefix(token, pref) {
+			token = token[len(pref):]
+			auth = AuthPrefix(i)
+			break
+		}
+	}
+	payload, err := base64.StdEncoding.DecodeString(token)
+	if err != nil {
+		return Unknown, token, "", err
+	}
+	id, key, found := strings.Cut(string(payload), authSep)
+	if !found {
+		return auth, id, key, ErrNotEncoded
+	}
+	return auth, id, key, nil
+}
+
+func AuthPack(prefix AuthPrefix, id, key string) string {
+	return prefix.String() + base64.StdEncoding.EncodeToString([]byte(id+":"+key))
 }

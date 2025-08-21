@@ -15,6 +15,7 @@ import (
 	chmocks "github.com/absmach/supermq/channels/mocks"
 	climocks "github.com/absmach/supermq/clients/mocks"
 	"github.com/absmach/supermq/internal/testsutil"
+	"github.com/absmach/supermq/pkg/authn"
 	"github.com/absmach/supermq/pkg/connections"
 	"github.com/absmach/supermq/pkg/errors"
 	svcerr "github.com/absmach/supermq/pkg/errors/service"
@@ -190,9 +191,9 @@ func TestSubscribe(t *testing.T) {
 			ClientID: clientID,
 			Handler:  c,
 		}
-		authReq := &grpcClientsV1.AuthnReq{ClientSecret: tc.clientKey}
+		authReq := &grpcClientsV1.AuthnReq{Token: authn.AuthPack(authn.DomainAuth, tc.domainID, tc.clientKey)}
 		if strings.HasPrefix(tc.clientKey, "Client") {
-			authReq.ClientSecret = strings.TrimPrefix(tc.clientKey, "Client ")
+			authReq.Token = authn.AuthPack(authn.DomainAuth, tc.domainID, strings.TrimPrefix(tc.clientKey, "Client "))
 		}
 		clientsCall := clients.On("Authenticate", mock.Anything, authReq).Return(tc.authNRes, tc.authNErr)
 		channelsCall := channels.On("Authorize", mock.Anything, &grpcChannelsV1.AuthzReq{
@@ -202,10 +203,10 @@ func TestSubscribe(t *testing.T) {
 			ChannelId:  tc.chanID,
 			DomainId:   tc.domainID,
 		}).Return(tc.authZRes, tc.authZErr)
-		repocall := pubsub.On("Subscribe", mock.Anything, subConfig).Return(tc.subErr)
+		repoCall := pubsub.On("Subscribe", mock.Anything, subConfig).Return(tc.subErr)
 		err := svc.Subscribe(context.Background(), sessionID, tc.clientKey, tc.domainID, tc.chanID, tc.subtopic, c)
 		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
-		repocall.Unset()
+		repoCall.Unset()
 		clientsCall.Unset()
 		channelsCall.Unset()
 	}

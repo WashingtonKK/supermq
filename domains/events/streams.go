@@ -29,7 +29,6 @@ const (
 	rejectInvitationStream      = supermqPrefix + invitationReject
 	listInvitationsStream       = supermqPrefix + invitationList
 	listDomainInvitationsStream = supermqPrefix + invitationListDomain
-	retrieveInvitationStream    = supermqPrefix + invitationRetrieve
 	deleteInvitationStream      = supermqPrefix + invitationDelete
 )
 
@@ -212,27 +211,6 @@ func (es *eventStore) SendInvitation(ctx context.Context, session authn.Session,
 	}
 
 	return es.Publish(ctx, sendInvitationStream, event)
-}
-
-func (es *eventStore) ViewInvitation(ctx context.Context, session authn.Session, userID, domainID string) (domains.Invitation, error) {
-	invitation, err := es.svc.ViewInvitation(ctx, session, userID, domainID)
-	if err != nil {
-		return invitation, err
-	}
-
-	event := viewInvitationEvent{
-		inviteeUserID: userID,
-		domainID:      domainID,
-		roleID:        invitation.RoleID,
-		roleName:      invitation.RoleName,
-		session:       session,
-	}
-
-	if err := es.Publish(ctx, retrieveInvitationStream, event); err != nil {
-		return invitation, err
-	}
-
-	return invitation, nil
 }
 
 func (es *eventStore) ListInvitations(ctx context.Context, session authn.Session, pm domains.InvitationPageMeta) (domains.InvitationPage, error) {

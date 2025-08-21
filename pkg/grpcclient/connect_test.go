@@ -65,7 +65,7 @@ func TestHandler(t *testing.T) {
 				Timeout:      time.Second,
 				ServerCAFile: "invalid",
 			},
-			err: errors.New("failed to load root ca file: open invalid: no such file or directory"),
+			err: errors.New("failed to load root ca: failed to append root ca to tls.Config"),
 		},
 		{
 			desc: "failed with invalid server CA file as cert key",
@@ -74,7 +74,7 @@ func TestHandler(t *testing.T) {
 				Timeout:      time.Second,
 				ServerCAFile: "../../docker/ssl/certs/supermq-server.key",
 			},
-			err: errors.New("failed to append root ca to tls.Config"),
+			err: errors.New("failed to load root ca: failed to append root ca to tls.Config"),
 		},
 		{
 			desc: "failed with invalid client cert",
@@ -85,7 +85,7 @@ func TestHandler(t *testing.T) {
 				ClientKey:    "../../docker/ssl/certs/supermq-server.key",
 				ServerCAFile: "../../docker/ssl/certs/ca.crt",
 			},
-			err: errors.New("failed to client certificate and key open invalid: no such file or directory"),
+			err: errors.New("failed to client certificate and key tls: failed to find any PEM data in certificate input"),
 		},
 		{
 			desc: "failed with invalid client key",
@@ -96,7 +96,7 @@ func TestHandler(t *testing.T) {
 				ClientKey:    "invalid",
 				ServerCAFile: "../../docker/ssl/certs/ca.crt",
 			},
-			err: errors.New("failed to client certificate and key open invalid: no such file or directory"),
+			err: errors.New("failed to client certificate and key tls: failed to find any PEM data in key input"),
 		},
 	}
 
