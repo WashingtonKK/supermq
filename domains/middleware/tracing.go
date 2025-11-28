@@ -83,7 +83,7 @@ func (tm *tracingMiddleware) ListDomains(ctx context.Context, session authn.Sess
 	return tm.svc.ListDomains(ctx, session, p)
 }
 
-func (tm *tracingMiddleware) SendInvitation(ctx context.Context, session authn.Session, invitation domains.Invitation) (err error) {
+func (tm *tracingMiddleware) SendInvitation(ctx context.Context, session authn.Session, invitation domains.Invitation) (domains.Invitation, error) {
 	ctx, span := tracing.StartSpan(ctx, tm.tracer, "send_invitation", trace.WithAttributes(
 		attribute.String("domain_id", invitation.DomainID),
 		attribute.String("invitee_user_id", invitation.InviteeUserID),
@@ -126,7 +126,7 @@ func (tm *tracingMiddleware) AcceptInvitation(ctx context.Context, session authn
 	return tm.svc.AcceptInvitation(ctx, session, domainID)
 }
 
-func (tm *tracingMiddleware) RejectInvitation(ctx context.Context, session authn.Session, domainID string) (err error) {
+func (tm *tracingMiddleware) RejectInvitation(ctx context.Context, session authn.Session, domainID string) (inv domains.Invitation, err error) {
 	ctx, span := tracing.StartSpan(ctx, tm.tracer, "reject_invitation", trace.WithAttributes(
 		attribute.String("domain_id", domainID),
 	))

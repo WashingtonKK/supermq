@@ -93,7 +93,7 @@ func (ms *metricsMiddleware) ListDomains(ctx context.Context, session authn.Sess
 	return ms.svc.ListDomains(ctx, session, page)
 }
 
-func (mm *metricsMiddleware) SendInvitation(ctx context.Context, session authn.Session, invitation domains.Invitation) (err error) {
+func (mm *metricsMiddleware) SendInvitation(ctx context.Context, session authn.Session, invitation domains.Invitation) (domains.Invitation, error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "send_invitation").Add(1)
 		mm.latency.With("method", "send_invitation").Observe(time.Since(begin).Seconds())
@@ -125,7 +125,7 @@ func (mm *metricsMiddleware) AcceptInvitation(ctx context.Context, session authn
 	return mm.svc.AcceptInvitation(ctx, session, domainID)
 }
 
-func (mm *metricsMiddleware) RejectInvitation(ctx context.Context, session authn.Session, domainID string) (err error) {
+func (mm *metricsMiddleware) RejectInvitation(ctx context.Context, session authn.Session, domainID string) (inv domains.Invitation, err error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "reject_invitation").Add(1)
 		mm.latency.With("method", "reject_invitation").Observe(time.Since(begin).Seconds())

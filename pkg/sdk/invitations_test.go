@@ -126,7 +126,7 @@ func TestSendInvitation(t *testing.T) {
 				}
 			}
 			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
-			svcCall := svc.On("SendInvitation", mock.Anything, tc.session, tc.svcReq).Return(tc.svcErr)
+			svcCall := svc.On("SendInvitation", mock.Anything, tc.session, tc.svcReq).Return(domains.Invitation{}, tc.svcErr)
 			err := mgsdk.SendInvitation(context.Background(), tc.sendInvitationReq, tc.token)
 			assert.Equal(t, tc.err, err)
 			if tc.err == nil {
@@ -360,7 +360,7 @@ func TestRejectInvitation(t *testing.T) {
 				tc.session = smqauthn.Session{DomainUserID: validID, UserID: validID, DomainID: validID}
 			}
 			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
-			svcCall := svc.On("RejectInvitation", mock.Anything, tc.session, tc.domainID).Return(tc.svcErr)
+			svcCall := svc.On("RejectInvitation", mock.Anything, tc.session, tc.domainID).Return(domains.Invitation{}, tc.svcErr)
 			err := mgsdk.RejectInvitation(context.Background(), tc.domainID, tc.token)
 			assert.Equal(t, tc.err, err)
 			if tc.err == nil {

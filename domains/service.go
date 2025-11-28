@@ -188,30 +188,40 @@ func (svc service) ListDomains(ctx context.Context, session authn.Session, p Pag
 	return dp, nil
 }
 
-func (svc *service) SendInvitation(ctx context.Context, session authn.Session, invitation Invitation) error {
-	if _, err := svc.repo.RetrieveRole(ctx, invitation.RoleID); err != nil {
-		return errors.Wrap(svcerr.ErrInvalidRole, err)
+func (svc *service) SendInvitation(ctx context.Context, session authn.Session, invitation Invitation) (Invitation, error) {
+	role, err := svc.repo.RetrieveRole(ctx, invitation.RoleID)
+	if err != nil {
+		return Invitation{}, errors.Wrap(svcerr.ErrInvalidRole, err)
 	}
+	invitation.RoleName = role.Name
+
+	// Retrieve domain to get domain name
+	domain, err := svc.repo.RetrieveDomainByID(ctx, invitation.DomainID)
+	if err != nil {
+		return Invitation{}, errors.Wrap(svcerr.ErrViewEntity, err)
+	}
+	invitation.DomainName = domain.Name
+
 	invitation.InvitedBy = session.UserID
 	invitation.CreatedAt = time.Now().UTC()
 
 	if invitation.Resend {
 		if err := svc.resendInvitation(ctx, invitation); err != nil {
-			return errors.Wrap(svcerr.ErrUpdateEntity, err)
+			return Invitation{}, err
 		}
-		return nil
+		return invitation, nil
 	}
 
 	if err := svc.repo.SaveInvitation(ctx, invitation); err != nil {
-		return errors.Wrap(svcerr.ErrCreateEntity, err)
+		return Invitation{}, errors.Wrap(svcerr.ErrCreateEntity, err)
 	}
-	return nil
+	return invitation, nil
 }
 
 func (svc *service) resendInvitation(ctx context.Context, invitation Invitation) error {
 	inv, err := svc.repo.RetrieveInvitation(ctx, invitation.InviteeUserID, invitation.DomainID)
 	if err != nil {
-		return err
+		return errors.Wrap(svcerr.ErrViewEntity, err)
 	}
 	if !inv.ConfirmedAt.IsZero() {
 		return svcerr.ErrInvitationAlreadyAccepted
@@ -220,7 +230,7 @@ func (svc *service) resendInvitation(ctx context.Context, invitation Invitation)
 		invitation.RejectedAt = time.Time{}
 		invitation.UpdatedAt = time.Now().UTC()
 		if err := svc.repo.UpdateRejection(ctx, invitation); err != nil {
-			return err
+			return errors.Wrap(svcerr.ErrUpdateEntity, err)
 		}
 	}
 
@@ -248,7 +258,7 @@ func (svc *service) ListDomainInvitations(ctx context.Context, session authn.Ses
 func (svc *service) AcceptInvitation(ctx context.Context, session authn.Session, domainID string) (invitation Invitation, err error) {
 	inv, err := svc.repo.RetrieveInvitation(ctx, session.UserID, domainID)
 	if err != nil {
-		return Invitation{}, errors.Wrap(svcerr.ErrUpdateEntity, err)
+		return Invitation{}, errors.Wrap(svcerr.ErrViewEntity, err)
 	}
 
 	if inv.InviteeUserID != session.UserID {
@@ -261,6 +271,11 @@ func (svc *service) AcceptInvitation(ctx context.Context, session authn.Session,
 
 	if !inv.RejectedAt.IsZero() {
 		return Invitation{}, svcerr.ErrInvitationAlreadyRejected
+	}
+
+	inv, err = svc.populateDetails(ctx, inv, domainID)
+	if err != nil {
+		return Invitation{}, err
 	}
 
 	session.DomainID = domainID
@@ -279,32 +294,37 @@ func (svc *service) AcceptInvitation(ctx context.Context, session authn.Session,
 	return inv, nil
 }
 
-func (svc *service) RejectInvitation(ctx context.Context, session authn.Session, domainID string) error {
+func (svc *service) RejectInvitation(ctx context.Context, session authn.Session, domainID string) (Invitation, error) {
 	inv, err := svc.repo.RetrieveInvitation(ctx, session.UserID, domainID)
 	if err != nil {
-		return errors.Wrap(svcerr.ErrUpdateEntity, err)
+		return Invitation{}, errors.Wrap(svcerr.ErrViewEntity, err)
 	}
 
 	if inv.InviteeUserID != session.UserID {
-		return svcerr.ErrAuthorization
+		return Invitation{}, svcerr.ErrAuthorization
 	}
 
 	if !inv.ConfirmedAt.IsZero() {
-		return svcerr.ErrInvitationAlreadyAccepted
+		return Invitation{}, svcerr.ErrInvitationAlreadyAccepted
 	}
 
 	if !inv.RejectedAt.IsZero() {
-		return svcerr.ErrInvitationAlreadyRejected
+		return Invitation{}, svcerr.ErrInvitationAlreadyRejected
+	}
+
+	inv, err = svc.populateDetails(ctx, inv, domainID)
+	if err != nil {
+		return Invitation{}, err
 	}
 
 	inv.RejectedAt = time.Now().UTC()
 	inv.UpdatedAt = inv.RejectedAt
 
 	if err := svc.repo.UpdateRejection(ctx, inv); err != nil {
-		return errors.Wrap(svcerr.ErrUpdateEntity, err)
+		return Invitation{}, errors.Wrap(svcerr.ErrUpdateEntity, err)
 	}
 
-	return nil
+	return inv, nil
 }
 
 func (svc *service) DeleteInvitation(ctx context.Context, session authn.Session, inviteeUserID, domainID string) error {
@@ -333,6 +353,29 @@ func (svc *service) DeleteInvitation(ctx context.Context, session authn.Session,
 	}
 
 	return nil
+}
+
+// Add domain and role names for an invitation if they are not already set.
+func (svc *service) populateDetails(ctx context.Context, inv Invitation, domainID string) (Invitation, error) {
+	// Populate domain name if not already set
+	if inv.DomainName == "" {
+		domain, err := svc.repo.RetrieveDomainByID(ctx, domainID)
+		if err != nil {
+			return Invitation{}, errors.Wrap(svcerr.ErrViewEntity, err)
+		}
+		inv.DomainName = domain.Name
+	}
+
+	// Populate role name if not already set
+	if inv.RoleName == "" {
+		role, err := svc.repo.RetrieveRole(ctx, inv.RoleID)
+		if err != nil {
+			return Invitation{}, errors.Wrap(svcerr.ErrViewEntity, err)
+		}
+		inv.RoleName = role.Name
+	}
+
+	return inv, nil
 }
 
 // Add addition removal of user from invitations.

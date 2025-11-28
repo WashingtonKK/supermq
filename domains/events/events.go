@@ -306,6 +306,7 @@ func (lde listDomainsEvent) Encode() (map[string]any, error) {
 type sendInvitationEvent struct {
 	invitation domains.Invitation
 	session    authn.Session
+	requestID  string
 }
 
 func (sie sendInvitationEvent) Encode() (map[string]any, error) {
@@ -317,6 +318,14 @@ func (sie sendInvitationEvent) Encode() (map[string]any, error) {
 		"role_id":         sie.invitation.RoleID,
 		"token_type":      sie.session.Type.String(),
 		"super_admin":     sie.session.SuperAdmin,
+		"request_id":      sie.requestID,
+	}
+
+	if sie.invitation.DomainName != "" {
+		val["domain_name"] = sie.invitation.DomainName
+	}
+	if sie.invitation.RoleName != "" {
+		val["role_name"] = sie.invitation.RoleName
 	}
 
 	return val, nil
@@ -324,7 +333,8 @@ func (sie sendInvitationEvent) Encode() (map[string]any, error) {
 
 type listInvitationsEvent struct {
 	domains.InvitationPageMeta
-	session authn.Session
+	session   authn.Session
+	requestID string
 }
 
 func (lie listInvitationsEvent) Encode() (map[string]any, error) {
@@ -334,6 +344,7 @@ func (lie listInvitationsEvent) Encode() (map[string]any, error) {
 		"limit":      lie.Limit,
 		"user_id":    lie.session.UserID,
 		"token_type": lie.session.Type.String(),
+		"request_id": lie.requestID,
 	}
 
 	if lie.InvitedBy != "" {
@@ -357,7 +368,8 @@ func (lie listInvitationsEvent) Encode() (map[string]any, error) {
 
 type listDomainInvitationsEvent struct {
 	domains.InvitationPageMeta
-	session authn.Session
+	session   authn.Session
+	requestID string
 }
 
 func (lie listDomainInvitationsEvent) Encode() (map[string]any, error) {
@@ -368,6 +380,7 @@ func (lie listDomainInvitationsEvent) Encode() (map[string]any, error) {
 		"domain_id":   lie.session.DomainID,
 		"token_type":  lie.session.Type.String(),
 		"super_admin": lie.session.SuperAdmin,
+		"request_id":  lie.requestID,
 	}
 
 	if lie.InvitedBy != "" {
@@ -387,34 +400,56 @@ func (lie listDomainInvitationsEvent) Encode() (map[string]any, error) {
 }
 
 type acceptInvitationEvent struct {
-	domainID string
-	session  authn.Session
+	invitation domains.Invitation
+	session    authn.Session
+	requestID  string
 }
 
 func (aie acceptInvitationEvent) Encode() (map[string]any, error) {
 	val := map[string]any{
 		"operation":       invitationAccept,
-		"domain_id":       aie.domainID,
+		"domain_id":       aie.invitation.DomainID,
 		"invitee_user_id": aie.session.UserID,
+		"invited_by":      aie.invitation.InvitedBy,
+		"role_id":         aie.invitation.RoleID,
 		"token_type":      aie.session.Type.String(),
 		"super_admin":     aie.session.SuperAdmin,
+		"request_id":      aie.requestID,
+	}
+
+	if aie.invitation.DomainName != "" {
+		val["domain_name"] = aie.invitation.DomainName
+	}
+	if aie.invitation.RoleName != "" {
+		val["role_name"] = aie.invitation.RoleName
 	}
 
 	return val, nil
 }
 
 type rejectInvitationEvent struct {
-	domainID string
-	session  authn.Session
+	invitation domains.Invitation
+	session    authn.Session
+	requestID  string
 }
 
 func (rie rejectInvitationEvent) Encode() (map[string]any, error) {
 	val := map[string]any{
 		"operation":       invitationReject,
-		"domain_id":       rie.domainID,
+		"domain_id":       rie.invitation.DomainID,
 		"invitee_user_id": rie.session.UserID,
+		"invited_by":      rie.invitation.InvitedBy,
+		"role_id":         rie.invitation.RoleID,
 		"token_type":      rie.session.Type.String(),
 		"super_admin":     rie.session.SuperAdmin,
+		"request_id":      rie.requestID,
+	}
+
+	if rie.invitation.DomainName != "" {
+		val["domain_name"] = rie.invitation.DomainName
+	}
+	if rie.invitation.RoleName != "" {
+		val["role_name"] = rie.invitation.RoleName
 	}
 
 	return val, nil
@@ -424,6 +459,7 @@ type deleteInvitationEvent struct {
 	inviteeUserID string
 	domainID      string
 	session       authn.Session
+	requestID     string
 }
 
 func (die deleteInvitationEvent) Encode() (map[string]any, error) {
@@ -433,6 +469,7 @@ func (die deleteInvitationEvent) Encode() (map[string]any, error) {
 		"domain_id":       die.domainID,
 		"token_type":      die.session.Type.String(),
 		"super_admin":     die.session.SuperAdmin,
+		"request_id":      die.requestID,
 	}
 
 	return val, nil

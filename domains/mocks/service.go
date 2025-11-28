@@ -934,20 +934,29 @@ func (_c *Service_ListInvitations_Call) RunAndReturn(run func(ctx context.Contex
 }
 
 // RejectInvitation provides a mock function for the type Service
-func (_mock *Service) RejectInvitation(ctx context.Context, session authn.Session, domainID string) error {
+func (_mock *Service) RejectInvitation(ctx context.Context, session authn.Session, domainID string) (domains.Invitation, error) {
 	ret := _mock.Called(ctx, session, domainID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for RejectInvitation")
 	}
 
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, authn.Session, string) error); ok {
+	var r0 domains.Invitation
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, authn.Session, string) (domains.Invitation, error)); ok {
+		return returnFunc(ctx, session, domainID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, authn.Session, string) domains.Invitation); ok {
 		r0 = returnFunc(ctx, session, domainID)
 	} else {
-		r0 = ret.Error(0)
+		r0 = ret.Get(0).(domains.Invitation)
 	}
-	return r0
+	if returnFunc, ok := ret.Get(1).(func(context.Context, authn.Session, string) error); ok {
+		r1 = returnFunc(ctx, session, domainID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
 // Service_RejectInvitation_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RejectInvitation'
@@ -986,12 +995,12 @@ func (_c *Service_RejectInvitation_Call) Run(run func(ctx context.Context, sessi
 	return _c
 }
 
-func (_c *Service_RejectInvitation_Call) Return(err error) *Service_RejectInvitation_Call {
-	_c.Call.Return(err)
+func (_c *Service_RejectInvitation_Call) Return(invitation domains.Invitation, err error) *Service_RejectInvitation_Call {
+	_c.Call.Return(invitation, err)
 	return _c
 }
 
-func (_c *Service_RejectInvitation_Call) RunAndReturn(run func(ctx context.Context, session authn.Session, domainID string) error) *Service_RejectInvitation_Call {
+func (_c *Service_RejectInvitation_Call) RunAndReturn(run func(ctx context.Context, session authn.Session, domainID string) (domains.Invitation, error)) *Service_RejectInvitation_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -2236,20 +2245,29 @@ func (_c *Service_RoleRemoveMembers_Call) RunAndReturn(run func(ctx context.Cont
 }
 
 // SendInvitation provides a mock function for the type Service
-func (_mock *Service) SendInvitation(ctx context.Context, session authn.Session, invitation domains.Invitation) error {
+func (_mock *Service) SendInvitation(ctx context.Context, session authn.Session, invitation domains.Invitation) (domains.Invitation, error) {
 	ret := _mock.Called(ctx, session, invitation)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SendInvitation")
 	}
 
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, authn.Session, domains.Invitation) error); ok {
+	var r0 domains.Invitation
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, authn.Session, domains.Invitation) (domains.Invitation, error)); ok {
+		return returnFunc(ctx, session, invitation)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, authn.Session, domains.Invitation) domains.Invitation); ok {
 		r0 = returnFunc(ctx, session, invitation)
 	} else {
-		r0 = ret.Error(0)
+		r0 = ret.Get(0).(domains.Invitation)
 	}
-	return r0
+	if returnFunc, ok := ret.Get(1).(func(context.Context, authn.Session, domains.Invitation) error); ok {
+		r1 = returnFunc(ctx, session, invitation)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
 // Service_SendInvitation_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SendInvitation'
@@ -2288,12 +2306,12 @@ func (_c *Service_SendInvitation_Call) Run(run func(ctx context.Context, session
 	return _c
 }
 
-func (_c *Service_SendInvitation_Call) Return(err error) *Service_SendInvitation_Call {
-	_c.Call.Return(err)
+func (_c *Service_SendInvitation_Call) Return(invitation1 domains.Invitation, err error) *Service_SendInvitation_Call {
+	_c.Call.Return(invitation1, err)
 	return _c
 }
 
-func (_c *Service_SendInvitation_Call) RunAndReturn(run func(ctx context.Context, session authn.Session, invitation domains.Invitation) error) *Service_SendInvitation_Call {
+func (_c *Service_SendInvitation_Call) RunAndReturn(run func(ctx context.Context, session authn.Session, invitation domains.Invitation) (domains.Invitation, error)) *Service_SendInvitation_Call {
 	_c.Call.Return(run)
 	return _c
 }
